@@ -16,8 +16,8 @@
 
 | 項目 | 位置 |
 |---|---|
-| 需求 PDF | `國泰世華iOS面試考題(urgent-曾子庭).pdf` |
-| Zeplin 專案 | https://app.zeplin.io/project/5c498614493bf5bf68258c5a/dashboard |
+| 需求 PDF | `國泰世華iOS面試考題(urgent-曾子庭).pdf`（不入版控） |
+| Zeplin 專案 | 連結見面試信件（不公開） |
 | 設計規格摘錄 | `docs/design-spec.md` |
 
 Zeplin 四個畫面：

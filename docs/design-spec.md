@@ -1,6 +1,6 @@
 # 設計規格摘錄（Zeplin）
 
-專案：iOS Interview — https://app.zeplin.io/project/5c498614493bf5bf68258c5a
+專案：iOS Interview（Zeplin 連結見面試信件，不公開）
 擷取日期：2026-08-07　Platform：iOS　基準尺寸：375 × 667（iPhone 8）
 
 ---
