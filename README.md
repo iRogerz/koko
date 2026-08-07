@@ -27,7 +27,8 @@ cd koko && xcodebuild test -project koko.xcodeproj -scheme koko -destination 'pl
 |---|---|
 | Model（`User` / `Friend` / `FriendStatus` / `UpdateDate`） | ✅ 完成，測試通過 |
 | 合併去重與排序（`FriendMerger` / `FriendSorter`） | ✅ 完成，測試通過 |
-| Network（`APIClient` / `Endpoint`） | ⬜ 未開始 |
+| Network（`HTTPClient` / `Endpoint` / `APIClient`） | ✅ 完成，測試通過 |
+| Repository（`FriendRepository`，三種情境並行載入） | ✅ 完成，測試通過 |
 | ViewModel（`FriendListViewModel`） | ⬜ 未開始 |
 | Scene（情境選擇頁 / 好友列表頁） | ⬜ 未開始 |
 
@@ -41,10 +42,15 @@ App 目前啟動後是一個佔位畫面（`RootPlaceholderViewController`），
                         │
                    FriendListViewModel      ← 不 import UIKit
                         │
-                   FriendRepository         ← 合併／去重／排序（純函式）
+                   FriendRepository         ← async let 並行載入 + 合併去重
                         │
-                   APIClient                ← URLSession + async/await
+                     APIClient              ← 解 response 信封 → Model
+                        │
+                    HTTPClient (protocol)   ← URLSessionHTTPClient｜StubHTTPClient
 ```
+
+網路層抽成 `HTTPClient` protocol，測試注入 stub —— 全部單元測試都不碰真實網路，
+也不需要為了測試去動 `URLSession` 設定。
 
 三條硬規則：
 
