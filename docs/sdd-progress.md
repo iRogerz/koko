@@ -66,7 +66,8 @@ Phase 3 完成 → **下一步是 Phase 4（Context Reset + PEV Loop）**
 | Step | Plan | Execute | Verify | Status |
 |------|------|---------|--------|--------|
 | 0 | 專案去 Storyboard 化，改純程式碼啟動 | 刪 `Main.storyboard` / `LaunchScreen.storyboard` / 樣板 `ViewController.swift`；`Info.plist` 移除 `UISceneStoryboardFile`、改用 `UILaunchScreen` 空 dict；`project.pbxproj` 移除 `INFOPLIST_KEY_UIMainStoryboardFile` 與 `INFOPLIST_KEY_UILaunchStoryboardName`；deployment target `26.1` → `15.0`；`SceneDelegate` 以程式碼建立 `UIWindow` | grep 全專案無 `.storyboard` / `.xib` / `import SwiftUI` ✓；待使用者跑 build | **待使用者驗證** |
-| 1 | Model 層：`User` / `Friend` / `FriendStatus` Decodable + `updateDate` 正規化，測試先寫 | 新增 `Model/{UpdateDate,FriendStatus,Friend,User,APIResponse}.swift`；測試 `kokoTests/Model/*` 四檔 + `Support/FixtureLoader.swift`；`Fixtures/` 放入五支 API 的實際回應 | 全部 Model 檔只 `import Foundation` ✓；待使用者跑 test | **待使用者驗證** |
+| 1 | Model 層：`User` / `Friend` / `FriendStatus` Decodable + `updateDate` 正規化，測試先寫 | 新增 `Model/{UpdateDate,FriendStatus,Friend,User,APIResponse}.swift`；測試 `kokoTests/Model/*` 四檔 + `Support/FixtureLoader.swift`；`Fixtures/` 放入五支 API 的實際回應 | 全部 Model 檔只 `import Foundation` ✓；使用者回報測試全過 ✓ | **✅ 完成** |
+| 2 | 合併去重（§5.1）與 `isTop` 置頂排序（§5.2）純函式，測試先寫 | 新增 `Repository/{FriendMerger,FriendSorter}.swift`；測試 `kokoTests/Repository/*` 兩檔 + `Support/FriendBuilder.swift` | Repository 層只 `import Foundation` ✓；使用者回報測試全過 ✓（含 §5.3 黃金樣本逐欄比對） | **✅ 完成** |
 
 ### Step 0 決策
 
@@ -106,6 +107,18 @@ Phase 3 完成 → **下一步是 Phase 4（Context Reset + PEV Loop）**
 - 注意：`/Users/irogerz`（家目錄）本身是一個 git repo，但 `Developer/` 未被它追蹤，
   與本 repo 無實際衝突。
 
+### Step 2 決策
+
+- **合併與排序拆成兩個型別**（`FriendMerger` / `FriendSorter`），對應 spec §5.1 與 §5.2
+  兩條獨立規則，各自可單獨測試。兩者都是 `enum` 命名空間 + static 純函式，無狀態。
+- **勝出比較用 `>=` 而非 `>`**，直接落實 §5.1 規則 4「日期相同取後出現者」，
+  不需要額外的 tie-break 分支。
+- **輸出順序 = 各 `fid` 首次出現的順序**（另存一個 `orderOfFirstAppearance` 陣列）。
+  Dictionary 本身無序，只靠它會得到不穩定的結果，黃金樣本會隨機失敗。
+- **排序刻意不用 `sorted(by:)`。** Swift 的 `sort` **不保證穩定**，
+  而 §5.2 要求「其餘維持合併後的原始順序」。改用 `filter(\.isTop) + filter { !$0.isTop }`，
+  從實作上保證穩定性，不依賴標準函式庫未承諾的行為。
+
 ### Fixtures 已驗證
 
 `kokoTests/Fixtures/` 的五支 JSON 於 2026-08-07 自 `dimanyen.github.io` 取得，
@@ -123,6 +136,10 @@ friend1 的 004/005 同名不同 fid、friend3 的 2 筆 `status == 0`）。
 | 把 `status` 解碼放寬成同時吃字串 | `test_decode_rejectsNonNumberStatus` | 測試 |
 | 邀請卡片判定散落多處 / 改回 `status == 2` | `test_invitationCard_isStatusZero`、`test_onlyStatusZeroIsInvitationCard`、`test_statusTwoIsNotInvitationCard` | 測試 |
 | 用 `name` 去重 | `test_decode_friend1_hasSameNameWithDistinctFids` 把「同名不同 fid」前提釘死 | 測試 |
+| 合併時把日期比較換回字串比較 | `test_merge_usesNormalizedDate_notStringOrder` —— 直接斷言 fid 001 合併後是 `.completed`，字串比較會得到 `.invitationSent` | 測試 |
+| 合併輸出順序依賴 Dictionary（不穩定） | `test_merge_preservesFirstAppearanceOrder`、`test_merge_replacedRecordKeepsOriginalPosition` | 測試 |
+| 排序改用不保證穩定的 `sorted(by:)` | `test_sort_isStableAmongTop`、`test_sort_isStableAmongNonTop` | 測試 |
+| 合併改用 `name` 當鍵 | `test_merge_dedupeByFid_notByName`、`test_merge_sameNameDifferentFid_areBothKept` | 測試 |
 
 ## Open questions
 
@@ -133,10 +150,10 @@ friend1 的 004/005 同名不同 fid、friend3 的 2 筆 `status == 0`）。
 1. ~~`/clear` 重置 context~~ ✓
 2. ~~建立 Xcode 專案（iOS 15+，無 Storyboard）~~ ✓ 專案名為 `koko`，Step 0 已去 Storyboard 化
 3. ~~PEV Step 1：Model 層~~ ✓ 已完成，**等使用者跑 test 回報**
-4. PEV Step 2：`FriendMerger` 純函式 + `test_merge_goldenSample`
-   （黃金樣本表在 `docs/spec.md` §5.3）。
+4. ~~PEV Step 2：`FriendMerger` 純函式 + `test_merge_goldenSample`~~ ✓ 已完成，**等使用者跑 test 回報**
 5. PEV Step 3：`APIClient` / `Endpoint` / `FriendRepository`（`async let` 並行）。
-6. 之後才進 UI（ScenarioPicker → FriendList），並刪除 `RootPlaceholderViewController`。
+6. PEV Step 4：`FriendListViewModel` + `FriendListViewState`（含搜尋篩選純函式與狀態判定）。
+7. 之後才進 UI（ScenarioPicker → FriendList），並刪除 `RootPlaceholderViewController`。
 
 ## Notes
 

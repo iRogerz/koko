@@ -26,8 +26,9 @@ cd koko && xcodebuild test -project koko.xcodeproj -scheme koko -destination 'pl
 | 層 | 狀態 |
 |---|---|
 | Model（`User` / `Friend` / `FriendStatus` / `UpdateDate`） | ✅ 完成，測試通過 |
-| Repository（合併去重） | ⬜ 未開始 |
+| 合併去重與排序（`FriendMerger` / `FriendSorter`） | ✅ 完成，測試通過 |
 | Network（`APIClient` / `Endpoint`） | ⬜ 未開始 |
+| ViewModel（`FriendListViewModel`） | ⬜ 未開始 |
 | Scene（情境選擇頁 / 好友列表頁） | ⬜ 未開始 |
 
 App 目前啟動後是一個佔位畫面（`RootPlaceholderViewController`），
