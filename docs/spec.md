@@ -254,14 +254,26 @@ App 啟動先進入**獨立的情境選擇首頁**，列出三個選項，點擊
 
 ### 7.1 View State
 
+ViewModel 對外只暴露**單一** view state。header（§6.1）三種狀態共用，
+故 `user` 與內容狀態並列，不放在個別 case 內。
+
 ```swift
-enum FriendListViewState {
-    case loading
-    case empty                                  // 狀態 A
-    case loaded(invites: [Friend], friends: [Friend])  // 狀態 B / C
-    case failed(Error)
+struct FriendListViewState {
+    let user: User?          // nil = 尚未載入，header 顯示骨架
+    let content: Content
+
+    enum Content {
+        case loading
+        case empty                                         // 狀態 A
+        case loaded(invites: [Friend], friends: [Friend])  // 狀態 B / C
+        case failed(Error)
+    }
 }
 ```
+
+- `invites`：`status == 0`，即邀請卡片區；**不受搜尋關鍵字影響**（§6.4）。
+- `friends`：其餘好友，已套用置頂排序（§5.2）與搜尋篩選（§6.4）。
+- 「好友」tab badge 取 `invites.count`，為 0 時隱藏（§6.3）。
 
 ---
 
@@ -328,6 +340,8 @@ enum FriendListViewState {
 | O-2 | `isTop` 是否置頂排序，設計稿未明確呈現 | 置頂（§5.2） |
 | O-3 | 邀請 ✓／✕ 無對應 API | 僅做本地 UI 行為（§6.2） |
 | O-4 | 網路失敗行為，需求未提 | 顯示錯誤提示 + 重試；不做自動重試 |
+| O-5 | §7.1 初版的 `enum FriendListViewState` 沒有容納 header 用的 `user`，但 §6.1 規定 header 三種狀態共用 | 改為 `struct FriendListViewState { user, content }`，四個 case 原樣移入 `Content`。仍是單一 view state，符合 CLAUDE.md rule 3（2026-08-07 決議） |
+| O-6 | §6.2 寫「✓ 接受」與「✕ 拒絕」都是「本地移除該筆邀請」，但接受後該人理應成為好友、出現在下方清單 | **依 spec 字面實作：兩者都只是移除。** 理由：無對應 API，且 spec 為唯一真實來源。若錄影時覺得「接受後人消失」觀感不佳，改成接受→`status` 轉 `1` 併入好友清單即可，僅影響 ViewModel 一個方法 |
 
 ---
 
