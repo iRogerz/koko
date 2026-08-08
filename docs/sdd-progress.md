@@ -69,6 +69,7 @@ Phase 3 完成 → **下一步是 Phase 4（Context Reset + PEV Loop）**
 | 1 | Model 層：`User` / `Friend` / `FriendStatus` Decodable + `updateDate` 正規化，測試先寫 | 新增 `Model/{UpdateDate,FriendStatus,Friend,User,APIResponse}.swift`；測試 `kokoTests/Model/*` 四檔 + `Support/FixtureLoader.swift`；`Fixtures/` 放入五支 API 的實際回應 | 全部 Model 檔只 `import Foundation` ✓；使用者回報測試全過 ✓ | **✅ 完成** |
 | 2 | 合併去重（§5.1）與 `isTop` 置頂排序（§5.2）純函式，測試先寫 | 新增 `Repository/{FriendMerger,FriendSorter}.swift`；測試 `kokoTests/Repository/*` 兩檔 + `Support/FriendBuilder.swift` | Repository 層只 `import Foundation` ✓；使用者回報測試全過 ✓（含 §5.3 黃金樣本逐欄比對） | **✅ 完成** |
 | 3 | Network + Repository：`HTTPClient` protocol、`Endpoint`、`APIClient`、`FriendRepository`（`async let` 並行），測試先寫 | 新增 `Network/{Endpoint,HTTPClient,URLSessionHTTPClient,APIClient}.swift`、`Model/Scenario.swift`、`Repository/FriendRepository.swift`；測試 `kokoTests/Network/*` 兩檔 + `Repository/FriendRepositoryTests.swift` + `Support/{StubHTTPClient,XCTestAsyncHelpers}.swift` | Network / Repository 層只 `import Foundation` ✓；使用者回報測試全過 ✓（含 AC-3 並行量測） | **✅ 完成** |
+| 4 | ViewModel：`FriendListViewState` + `FriendListViewModel`（`@Published`）、搜尋篩選純函式，測試先寫 | 新增 `Scene/FriendList/{FriendListViewState,FriendListViewModel}.swift`、`Repository/FriendSearch.swift`；測試 `kokoTests/Scene/FriendListViewModelTests.swift` + `Repository/FriendSearchTests.swift` + `Support/StubFriendRepository.swift`；另補 `scripts/check-architecture.sh` | `./scripts/check-architecture.sh` 全綠且經負面測試 ✓；待使用者跑 test | **待使用者驗證** |
 
 ### Step 0 決策
 
@@ -107,6 +108,40 @@ Phase 3 完成 → **下一步是 Phase 4（Context Reset + PEV Loop）**
   並把已被追蹤的 `koko.xcodeproj/xcuserdata/…` 移出版控。
 - 注意：`/Users/irogerz`（家目錄）本身是一個 git repo，但 `Developer/` 未被它追蹤，
   與本 repo 無實際衝突。
+
+### Step 4 決策
+
+- **state 形式選 `@Published`**（非 `AsyncStream`）。專案資料流全面 async/await，
+  但畫面綁定用 Combine 是 UIKit + MVVM 最常見組合，VC 端不需處理 Task 取消。
+  `import Combine` 不違反「ViewModel 不得 import UIKit」。
+- **`@Published private(set)` 會讓投影值 `$state` 在型別外不可見**，
+  故另外開唯讀的 `statePublisher: AnyPublisher<...>` 給 View 訂閱。
+- **補上 spec §7.1 的缺口（O-5）**：原 `enum` 沒有容納 header 用的 `user`，
+  但 §6.1 規定 header 三種狀態共用。改為 `struct { user, content }`，
+  四個 case 原樣移入 `Content`，仍是單一 view state。**spec 已同步更新**。
+- **`allFriends` 保留完整清單，搜尋與分區都即時推導。**
+  不快取篩選結果，因此「清空關鍵字還原完整清單」是結構上保證的，不靠額外還原邏輯。
+- **`refresh()` 不切回 `.loading`。** 下拉本身已有轉圈動畫，再閃骨架很突兀；
+  且會讓已顯示的清單瞬間消失。
+- **接受／拒絕邀請都只是本地移除**（依 spec §6.2 字面）。
+  「接受後應轉成好友」的疑慮記為 O-6，改動範圍僅 ViewModel 一個方法。
+
+### Step 4 決策
+
+- **View state 改為 `struct { user, content }`**，四個 case 原樣移入 `Content`。
+  原因：§7.1 初版的 enum 沒有容納 header 用的 `user`，但 §6.1 規定 header 三種狀態共用。
+  已回寫 `docs/spec.md` §7.1 並記為 O-5。仍是單一 view state，符合 CLAUDE.md rule 3。
+- **ViewModel 只保留一份 `allFriends`（完整清單），搜尋與分區都即時推導。**
+  不另存「篩選後的清單」——那會產生兩份真實來源，清空關鍵字就可能還原不回去。
+- **`@Published private(set)` 的投影值 `$state` 在型別外不可見**，
+  故另開唯讀的 `statePublisher: AnyPublisher<...>` 給 View 訂閱。
+- **`refresh()` 不切回 `.loading`**（AC-12）：下拉本身已有轉圈動畫，再閃骨架很突兀。
+  寫成測試 `test_refresh_doesNotShowLoadingState`。
+- **空狀態判定寫在 `makeContent()` 開頭的 `guard !allFriends.isEmpty`**，
+  用的是合併後**總數**。只有邀請沒有一般好友時仍是狀態 C
+  （`test_load_withOnlyInvitations_isNotEmpty` 釘住這點）。
+- **接受／拒絕邀請都只是本地移除**，依 spec §6.2 字面實作，見 O-6。
+  若錄影時觀感不佳，改成接受→轉 `status 1` 只影響一個方法。
 
 ### Step 3 決策
 
@@ -164,6 +199,43 @@ friend1 的 004/005 同名不同 fid、friend3 的 2 筆 `status == 0`）。
 | API 網址打錯（stub 測試看不出來） | `EndpointTests.test_endpoint_urls` 逐字釘死五支網址 | 測試 |
 | 失敗時偷偷自動重試 | `test_load_doesNotRetryOnFailure` 斷言請求次數為 1（O-4） | 測試 |
 | F1/F2 其一失敗卻仍回傳部分結果 | `test_load_friendsOnly_failsIfEitherListFails`（§5.1 規則 1） | 測試 |
+| **`@MainActor` 測試類別內寫同步 `test_` 方法 → SIGABRT** | `scripts/check-architecture.sh` 規則 3 | lint 腳本 |
+| ViewModel／ViewState 誤 import UIKit（AC-11） | 同上 規則 1（行首比對，註解不誤報） | lint 腳本 |
+| 資料層誤 import UIKit | 同上 規則 2 | lint 腳本 |
+| 誤加回 Storyboard／XIB／SwiftUI | 同上 規則 4、5 | lint 腳本 |
+
+### Hashimoto 案例詳述：MainActor 同步測試方法（2026-08-07）
+
+**症狀**：`test_initialState_isLoadingWithoutUser` crash，訊息是
+`malloc: *** error for object 0x262c5e6f0: pointer being freed was not allocated`。
+
+**定位過程中有用的觀察**：
+
+1. 三次執行、三個不同 process，**位址完全相同** → 確定性錯誤，排除 data race。
+2. 位址固定且低，符合「常數／immortal 物件被 free」的特徵。
+3. 從 `.xcresult` 讀出 **23 個測試 22 個通過**，只有這一個 crash
+   （`xcrun xcresulttool get test-results summary --path <xcresult>`）——
+   這一步最關鍵，推翻了先前「`User.stub` static let 有問題」的錯誤假設。
+4. 該測試是全類別**唯一的同步方法**，其餘 22 個都是 `async`。
+
+**原因**：類別標了 `@MainActor`。XCTest 透過 ObjC runtime 呼叫同步測試方法，
+與 MainActor 隔離檢查衝突而 abort。`async` 測試走 Swift concurrency runtime，不受影響。
+
+**修正**：測試方法改成 `async`（一個字）。
+
+**教訓**：錯誤訊息完全不提 MainActor，靠讀訊息永遠猜不到。
+`.xcresult` 的通過／失敗分佈才是決定性線索 —— 下次先讀它，不要從錯誤訊息開始猜。
+
+**腳本本身也踩了兩個坑**（都是寫完立刻用假違規驗證才發現）：
+- `set -u` + process substitution + `local` → 改用 `for` 迴圈。
+- `"$file：..."` 的**全形冒號是多位元組字元，bash 會併進變數名** → 必須寫成 `"${file}："`。
+  這也說明「從不亮紅燈的檢查等於沒有檢查」，guardrail 一定要用假違規驗證過。
+| 空狀態誤用「一般好友數為 0」判定 | `test_load_withOnlyInvitations_isNotEmpty` —— 只有邀請時仍須是狀態 C | 測試 |
+| 搜尋無結果誤切成空狀態畫面 | `test_search_withNoMatches_staysLoadedWithEmptyList` | 測試 |
+| 搜尋誤篩到邀請卡片區 | `test_search_filtersFriendListButNotInvitations` | 測試 |
+| 下拉更新時清掉搜尋關鍵字／閃回骨架 | `test_refresh_keepsActiveKeyword`、`test_refresh_doesNotShowLoadingState` | 測試 |
+| 邀請 ✓/✕ 偷打後端 API | `test_respondToInvitation_removesItLocally` 斷言 loadCount 不變（§6.2） | 測試 |
+| **架構規則靠人工 grep 檢查（會被註解誤導）** | `scripts/check-architecture.sh` —— 行首比對 import、涵蓋 rule 1/2、SwiftUI、Storyboard、邀請判定集中性；已做負面測試確認會回非零 exit code | 腳本 |
 
 ## Open questions
 
@@ -173,14 +245,24 @@ friend1 的 004/005 同名不同 fid、friend3 的 2 筆 `status == 0`）。
 
 1. ~~`/clear` 重置 context~~ ✓
 2. ~~建立 Xcode 專案（iOS 15+，無 Storyboard）~~ ✓ 專案名為 `koko`，Step 0 已去 Storyboard 化
-3. ~~PEV Step 1：Model 層~~ ✓ 已完成，**等使用者跑 test 回報**
-4. ~~PEV Step 2：`FriendMerger` 純函式 + `test_merge_goldenSample`~~ ✓ 已完成，**等使用者跑 test 回報**
-5. ~~PEV Step 3：`APIClient` / `Endpoint` / `FriendRepository`（`async let` 並行）~~ ✓ 已完成，**等使用者跑 test 回報**
-6. PEV Step 4：`FriendListViewModel` + `FriendListViewState`（含搜尋篩選純函式與狀態判定）。
-7. 之後才進 UI（ScenarioPicker → FriendList），並刪除 `RootPlaceholderViewController`。
+3. ~~PEV Step 1：Model 層~~ ✓ 測試全過
+4. ~~PEV Step 2：`FriendMerger` 純函式 + `test_merge_goldenSample`~~ ✓ 測試全過
+5. ~~PEV Step 3：`APIClient` / `Endpoint` / `FriendRepository`（`async let` 並行）~~ ✓ 測試全過
+6. ~~PEV Step 4：`FriendListViewModel` + `FriendListViewState`~~ ✓ 測試全過（23/23）
+7. PEV Step 5：`DesignSystem/`（色票／字級／間距 token，取自 `docs/design-spec.md`）
+   ＋情境選擇頁 ScenarioPicker，並刪除 `RootPlaceholderViewController`。
+8. PEV Step 6：好友列表頁 UI（header／tab／搜尋框／邀請卡片／好友 cell）＋三種狀態。
+9. PEV Step 7：三項 UI 加分（下拉更新、搜尋框上推、邀請卡片展開收合）。
+10. 最後：錄影（AC-17，涵蓋三種情境與四項加分功能）。
+
+> 資料層（Model／Network／Repository／ViewModel）到此全部完成，後續都是畫面。
+> 每次動 code 後跑 `./scripts/check-architecture.sh`（不需編譯，agent 可自行執行）。
 
 ## Notes
 
 - 使用者自己跑 build／test／模擬器，agent 不要代跑；agent 只跑 lint 這類不需編譯的檢查。
-- 測試一律用 `KOKOFriendsTests/Fixtures/` 的離線 JSON，不打真實網路。
+- 測試一律用 `koko/kokoTests/Fixtures/` 的離線 JSON，不打真實網路。
+- **`@MainActor` 測試類別內的 test 方法一律寫成 `async`**，同步方法會 SIGABRT，見 Hashimoto log。
+- 讀測試結果用 `xcrun xcresulttool get test-results summary --path <xcresult>`，
+  比從 console 訊息猜快得多。
 - 交付物包含**錄影檔**，需涵蓋三種情境與四項加分功能（AC-17）。

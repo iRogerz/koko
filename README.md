@@ -29,8 +29,10 @@ cd koko && xcodebuild test -project koko.xcodeproj -scheme koko -destination 'pl
 | 合併去重與排序（`FriendMerger` / `FriendSorter`） | ✅ 完成，測試通過 |
 | Network（`HTTPClient` / `Endpoint` / `APIClient`） | ✅ 完成，測試通過 |
 | Repository（`FriendRepository`，三種情境並行載入） | ✅ 完成，測試通過 |
-| ViewModel（`FriendListViewModel`） | ⬜ 未開始 |
+| ViewModel（`FriendListViewModel` / 搜尋 / 狀態判定） | ✅ 完成，測試通過 |
 | Scene（情境選擇頁 / 好友列表頁） | ⬜ 未開始 |
+
+資料層到此全部完成，後續都是畫面。
 
 App 目前啟動後是一個佔位畫面（`RootPlaceholderViewController`），
 待情境選擇頁完成後移除。
@@ -124,6 +126,14 @@ urgent/
 | 有人把 `status` 解碼放寬成同時吃字串 | 傳字串必須解碼失敗 |
 | 有人把邀請卡片改回 `status == 2` | 三個測試從不同角度釘住 `status == 0` |
 | 有人改用 `name` 去重 | 把「同名不同 fid」這個前提寫成測試 |
+| 並行請求退化成循序 | 量測同時在途的請求數，循序會掉到 1 |
+
+另有 `scripts/check-architecture.sh` —— 不需編譯的架構檢查，涵蓋
+「ViewModel 不得 import UIKit」「不得殘留 Storyboard／SwiftUI」等規則：
+
+```bash
+./scripts/check-architecture.sh
+```
 
 ## 待補
 
