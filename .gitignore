@@ -22,3 +22,6 @@ DerivedData/
 
 # 考題原始文件不入版控（對方的資料）
 *.pdf
+
+# 但 Asset Catalog 裡的向量素材是 PDF，必須入版控
+!koko/koko/Assets.xcassets/**/*.pdf
