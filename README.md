@@ -30,12 +30,15 @@ cd koko && xcodebuild test -project koko.xcodeproj -scheme koko -destination 'pl
 | Network（`HTTPClient` / `Endpoint` / `APIClient`） | ✅ 完成，測試通過 |
 | Repository（`FriendRepository`，三種情境並行載入） | ✅ 完成，測試通過 |
 | ViewModel（`FriendListViewModel` / 搜尋 / 狀態判定） | ✅ 完成，測試通過 |
-| Scene（情境選擇頁 / 好友列表頁） | ⬜ 未開始 |
+| DesignSystem（色票／字級／間距／素材 token） | ✅ 完成，測試通過 |
+| Scene — 情境選擇頁 | ✅ 完成 |
+| Scene — 好友列表頁 | ⬜ 未開始 |
 
 資料層到此全部完成，後續都是畫面。
 
-App 目前啟動後是一個佔位畫面（`RootPlaceholderViewController`），
-待情境選擇頁完成後移除。
+App 啟動後進入情境選擇頁，點擊情境會 push 到一個暫時的文字畫面
+（`FriendListProbeViewController`），它會打真實網路跑完整條資料鏈。
+Step 6 完成好友列表頁後整檔刪除。
 
 ## 架構
 
@@ -137,6 +140,6 @@ urgent/
 
 ## 待補
 
-- [ ] Repository / Network / UI 三層
-- [ ] 加分項目：下拉更新、搜尋框上推、邀請卡片展開收合
+- [ ] 好友列表頁 UI（header／tab／搜尋框／邀請卡片／好友 cell／空狀態／TabBar）
+- [ ] 加分項目：下拉更新、搜尋框上推、邀請卡片展開收合（Unit Test 已完成）
 - [ ] 錄影檔（涵蓋三種情境與四項加分功能）

@@ -1,18 +1,18 @@
 # SDD Progress — KOKO 好友列表（國泰世華 iOS 面試考題）
 
-Last updated: 2026-08-07
+Last updated: 2026-08-08
 
 ## Current phase
 
-Phase 3 完成 → **下一步是 Phase 4（Context Reset + PEV Loop）**
+**Phase 4 進行中**（PEV Loop）。資料層與 DesignSystem 完成，Step 6 起為好友列表頁 UI。
 
 ## Completed phases
 
 - [x] Phase 1: Brain Dump — 來源為需求 PDF + Zeplin 四張設計稿 + 五支 API 實際回應
 - [x] Phase 2: Spec Interview — 四個技術選型問題已由使用者拍板（見下）
 - [x] Phase 3: Project Constitution + Feature Spec — `CLAUDE.md`、`docs/spec.md`、`docs/design-spec.md`
-- [ ] Phase 4: Context Reset + PEV Loop
-- [ ] Phase 5: Anti-Drift + Hashimoto
+- [~] Phase 4: Context Reset + PEV Loop —— Step 0～5 完成
+- [~] Phase 5: Anti-Drift + Hashimoto —— `scripts/check-architecture.sh` 已上線
 - [ ] Phase 6: Skill Extraction
 
 ## Phase 2 決議（使用者拍板）
@@ -65,18 +65,20 @@ Phase 3 完成 → **下一步是 Phase 4（Context Reset + PEV Loop）**
 
 | Step | Plan | Execute | Verify | Status |
 |------|------|---------|--------|--------|
-| 0 | 專案去 Storyboard 化，改純程式碼啟動 | 刪 `Main.storyboard` / `LaunchScreen.storyboard` / 樣板 `ViewController.swift`；`Info.plist` 移除 `UISceneStoryboardFile`、改用 `UILaunchScreen` 空 dict；`project.pbxproj` 移除 `INFOPLIST_KEY_UIMainStoryboardFile` 與 `INFOPLIST_KEY_UILaunchStoryboardName`；deployment target `26.1` → `15.0`；`SceneDelegate` 以程式碼建立 `UIWindow` | grep 全專案無 `.storyboard` / `.xib` / `import SwiftUI` ✓；待使用者跑 build | **待使用者驗證** |
+| 0 | 專案去 Storyboard 化，改純程式碼啟動 | 刪 `Main.storyboard` / `LaunchScreen.storyboard` / 樣板 `ViewController.swift`；`Info.plist` 移除 `UISceneStoryboardFile`、改用 `UILaunchScreen` 空 dict；`project.pbxproj` 移除 `INFOPLIST_KEY_UIMainStoryboardFile` 與 `INFOPLIST_KEY_UILaunchStoryboardName`；deployment target `26.1` → `15.0`；`SceneDelegate` 以程式碼建立 `UIWindow` | grep 全專案無 `.storyboard` / `.xib` / `import SwiftUI` ✓；使用者回報 build 與 Cmd+R 正常 ✓ | **✅ 完成** |
 | 1 | Model 層：`User` / `Friend` / `FriendStatus` Decodable + `updateDate` 正規化，測試先寫 | 新增 `Model/{UpdateDate,FriendStatus,Friend,User,APIResponse}.swift`；測試 `kokoTests/Model/*` 四檔 + `Support/FixtureLoader.swift`；`Fixtures/` 放入五支 API 的實際回應 | 全部 Model 檔只 `import Foundation` ✓；使用者回報測試全過 ✓ | **✅ 完成** |
 | 2 | 合併去重（§5.1）與 `isTop` 置頂排序（§5.2）純函式，測試先寫 | 新增 `Repository/{FriendMerger,FriendSorter}.swift`；測試 `kokoTests/Repository/*` 兩檔 + `Support/FriendBuilder.swift` | Repository 層只 `import Foundation` ✓；使用者回報測試全過 ✓（含 §5.3 黃金樣本逐欄比對） | **✅ 完成** |
 | 3 | Network + Repository：`HTTPClient` protocol、`Endpoint`、`APIClient`、`FriendRepository`（`async let` 並行），測試先寫 | 新增 `Network/{Endpoint,HTTPClient,URLSessionHTTPClient,APIClient}.swift`、`Model/Scenario.swift`、`Repository/FriendRepository.swift`；測試 `kokoTests/Network/*` 兩檔 + `Repository/FriendRepositoryTests.swift` + `Support/{StubHTTPClient,XCTestAsyncHelpers}.swift` | Network / Repository 層只 `import Foundation` ✓；使用者回報測試全過 ✓（含 AC-3 並行量測） | **✅ 完成** |
-| 4 | ViewModel：`FriendListViewState` + `FriendListViewModel`（`@Published`）、搜尋篩選純函式，測試先寫 | 新增 `Scene/FriendList/{FriendListViewState,FriendListViewModel}.swift`、`Repository/FriendSearch.swift`；測試 `kokoTests/Scene/FriendListViewModelTests.swift` + `Repository/FriendSearchTests.swift` + `Support/StubFriendRepository.swift`；另補 `scripts/check-architecture.sh` | `./scripts/check-architecture.sh` 全綠且經負面測試 ✓；待使用者跑 test | **待使用者驗證** |
+| 4 | ViewModel：`FriendListViewState` + `FriendListViewModel`（`@Published`）、搜尋篩選純函式，測試先寫 | 新增 `Scene/FriendList/{FriendListViewState,FriendListViewModel}.swift`、`Repository/FriendSearch.swift`；測試 `kokoTests/Scene/FriendListViewModelTests.swift` + `Repository/FriendSearchTests.swift` + `Support/StubFriendRepository.swift`；另補 `scripts/check-architecture.sh` | `./scripts/check-architecture.sh` 全綠且經負面測試 ✓；使用者回報測試全過 ✓（23/23） | **✅ 完成** |
+
+| 5 | DesignSystem token（色票／字級／間距／素材）＋情境選擇頁 ScenarioPicker | 安裝 11 個 Zeplin PDF 向量素材進 Asset Catalog；新增 `DesignSystem/{AppColor,AppText,Spacing,AppImage}.swift`、`Scene/ScenarioPicker/*`；刪除 `RootPlaceholderViewController`，`SceneDelegate` 改以 ScenarioPicker 為 root；新增暫時的 `FriendListProbeViewController` 作為 push 目的地 | 架構檢查全綠 ✓；使用者回報測試全過 ✓、Cmd+R 三情境畫面正確 ✓（含真實網路端到端） | **✅ 完成** |
 
 ### Step 0 決策
 
 - **`LaunchScreen.storyboard` 一併刪除**，改用 `Info.plist` 的 `UILaunchScreen` 空 dict（iOS 14+ 機制）。
   理由：憲法寫的是 no Storyboard，留一個 storyboard 只為了啟動畫面不一致。
-- 保留 `App/RootPlaceholderViewController.swift` 作為暫時 root，
-  **待 ScenarioPicker 完成後連同 `SceneDelegate` 內引用一併刪除**。
+- 曾以 `App/RootPlaceholderViewController.swift` 作為暫時 root，**Step 5 已刪除**，
+  改為 ScenarioPicker。
 - Deployment target 設 15.0。若 Xcode 26 拒絕（其最低支援可能是 15.6），改 15.6 並同步更新 `CLAUDE.md`。
 
 ### Step 1 決策
@@ -109,22 +111,24 @@ Phase 3 完成 → **下一步是 Phase 4（Context Reset + PEV Loop）**
 - 注意：`/Users/irogerz`（家目錄）本身是一個 git repo，但 `Developer/` 未被它追蹤，
   與本 repo 無實際衝突。
 
-### Step 4 決策
+### Step 5 決策
 
-- **state 形式選 `@Published`**（非 `AsyncStream`）。專案資料流全面 async/await，
-  但畫面綁定用 Combine 是 UIKit + MVVM 最常見組合，VC 端不需處理 Task 取消。
-  `import Combine` 不違反「ViewModel 不得 import UIKit」。
-- **`@Published private(set)` 會讓投影值 `$state` 在型別外不可見**，
-  故另外開唯讀的 `statePublisher: AnyPublisher<...>` 給 View 訂閱。
-- **補上 spec §7.1 的缺口（O-5）**：原 `enum` 沒有容納 header 用的 `user`，
-  但 §6.1 規定 header 三種狀態共用。改為 `struct { user, content }`，
-  四個 case 原樣移入 `Content`，仍是單一 view state。**spec 已同步更新**。
-- **`allFriends` 保留完整清單，搜尋與分區都即時推導。**
-  不快取篩選結果，因此「清空關鍵字還原完整清單」是結構上保證的，不靠額外還原邏輯。
-- **`refresh()` 不切回 `.loading`。** 下拉本身已有轉圈動畫，再閃骨架很突兀；
-  且會讓已顯示的清單瞬間消失。
-- **接受／拒絕邀請都只是本地移除**（依 spec §6.2 字面）。
-  「接受後應轉成好友」的疑慮記為 O-6，改動範圍僅 ViewModel 一個方法。
+- **素材全部是 Zeplin 匯出的 PDF 向量檔**，以 `Single Scale` + `preserves-vector-representation`
+  安裝進 Asset Catalog，一個檔吃所有解析度，不需要 @1x/@2x/@3x 三份。
+- **imageset 名稱沿用 Zeplin 檔名**（`icTabbarFriendsOn` 等），保留回溯設計稿的線索；
+  語意化命名放在 `AppImage` 的 case 名稱上，呼叫端不寫字串。
+- **`AppImage.image` 在素材缺漏時 `assertionFailure`**，不靜默回傳空白 —— 靜默變空白比崩潰難查。
+  另有 `test_allImages_resolveFromAssetCatalog` 覆蓋全部 case。
+- **色票依 design-spec 的「建議命名」改名**。Zeplin 的 `hot pink`／`very light pink`／
+  `transferMoney` 各有兩個不同值，測試 `test_duplicatelyNamedZeplinColors_areDistinct`
+  釘住「同名者必須解析成不同值」。
+- **字級封裝成 `TextStyle`（字體＋顏色＋行高＋字距）**，而不是只給 `UIFont`。
+  design-spec 有行高與字距的規格，只給字體的話 ViewController 還是得自己組
+  paragraph style，等於把魔術數字搬個位置。
+- **`Scenario` 的顯示文字放在 Scene 層**（`Scenario+Display.swift`），Model 層保持無 UI 文字。
+- **新增暫時的 `FriendListProbeViewController`**：讓情境選擇頁點下去有目的地，
+  同時是 `URLSessionHTTPClient` 唯一的實際驗證（單元測試一律注入 stub，那層沒被覆蓋）。
+  Step 6 完成後整檔刪除。
 
 ### Step 4 決策
 
@@ -249,9 +253,9 @@ friend1 的 004/005 同名不同 fid、friend3 的 2 筆 `status == 0`）。
 4. ~~PEV Step 2：`FriendMerger` 純函式 + `test_merge_goldenSample`~~ ✓ 測試全過
 5. ~~PEV Step 3：`APIClient` / `Endpoint` / `FriendRepository`（`async let` 並行）~~ ✓ 測試全過
 6. ~~PEV Step 4：`FriendListViewModel` + `FriendListViewState`~~ ✓ 測試全過（23/23）
-7. PEV Step 5：`DesignSystem/`（色票／字級／間距 token，取自 `docs/design-spec.md`）
-   ＋情境選擇頁 ScenarioPicker，並刪除 `RootPlaceholderViewController`。
-8. PEV Step 6：好友列表頁 UI（header／tab／搜尋框／邀請卡片／好友 cell）＋三種狀態。
+7. ~~PEV Step 5：`DesignSystem/` ＋情境選擇頁 ScenarioPicker~~ ✓ 已完成，**等使用者跑 test 回報**
+8. PEV Step 6：好友列表頁 UI（header／tab／搜尋框／邀請卡片／好友 cell／空狀態／TabBar）
+   ＋三種狀態；完成後刪除 `FriendListProbeViewController`。
 9. PEV Step 7：三項 UI 加分（下拉更新、搜尋框上推、邀請卡片展開收合）。
 10. 最後：錄影（AC-17，涵蓋三種情境與四項加分功能）。
 

@@ -20,8 +20,24 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         // 純程式碼建立 window，無 Storyboard。
         let window = UIWindow(windowScene: windowScene)
-        window.rootViewController = UINavigationController(rootViewController: RootPlaceholderViewController())
+        window.rootViewController = makeRootViewController()
         window.makeKeyAndVisible()
         self.window = window
+    }
+
+    /// spec.md §5：起始頁是情境選擇頁，點擊後 push 至好友列表頁。
+    private func makeRootViewController() -> UIViewController {
+        let navigationController = UINavigationController()
+
+        let picker = ScenarioPickerViewController { [weak navigationController] scenario in
+            // TODO: Step 6 換成 FriendListViewController。
+            navigationController?.pushViewController(
+                FriendListProbeViewController(scenario: scenario),
+                animated: true
+            )
+        }
+
+        navigationController.viewControllers = [picker]
+        return navigationController
     }
 }
