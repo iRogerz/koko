@@ -32,13 +32,12 @@ cd koko && xcodebuild test -project koko.xcodeproj -scheme koko -destination 'pl
 | ViewModel（`FriendListViewModel` / 搜尋 / 狀態判定） | ✅ 完成，測試通過 |
 | DesignSystem（色票／字級／間距／素材 token） | ✅ 完成，測試通過 |
 | Scene — 情境選擇頁 | ✅ 完成 |
-| Scene — 好友列表頁 | ⬜ 未開始 |
+| Scene — 好友列表頁（狀態 B／C） | ✅ 完成 |
+| Scene — 空狀態（狀態 A） | ⬜ 未開始 |
 
 資料層到此全部完成，後續都是畫面。
 
-App 啟動後進入情境選擇頁，點擊情境會 push 到一個暫時的文字畫面
-（`FriendListProbeViewController`），它會打真實網路跑完整條資料鏈。
-Step 6 完成好友列表頁後整檔刪除。
+好友列表頁的狀態 B／C（有好友、含邀請）已完成；狀態 A 空狀態畫面尚未實作。
 
 ## 架構
 

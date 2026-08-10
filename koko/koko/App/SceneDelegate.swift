@@ -30,14 +30,22 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let navigationController = UINavigationController()
 
         let picker = ScenarioPickerViewController { [weak navigationController] scenario in
-            // TODO: Step 6 換成 FriendListViewController。
             navigationController?.pushViewController(
-                FriendListProbeViewController(scenario: scenario),
+                Self.makeFriendList(for: scenario),
                 animated: true
             )
         }
 
         navigationController.viewControllers = [picker]
         return navigationController
+    }
+
+    /// 依賴組裝集中在這裡，畫面本身不認識 URLSession。
+    private static func makeFriendList(for scenario: Scenario) -> UIViewController {
+        let repository = FriendRepository(
+            apiClient: APIClient(httpClient: URLSessionHTTPClient())
+        )
+        let viewModel = FriendListViewModel(scenario: scenario, repository: repository)
+        return FriendListViewController(viewModel: viewModel)
     }
 }

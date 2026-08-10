@@ -111,6 +111,41 @@ Last updated: 2026-08-08
 - 注意：`/Users/irogerz`（家目錄）本身是一個 git repo，但 `Developer/` 未被它追蹤，
   與本 repo 無實際衝突。
 
+### 需求變更（2026-08-08）
+
+- **底部 TabBar 與「好友／聊天」segment 改為可切換**，非「朋友」的分頁內容為空白畫面。
+  原 spec §11 訂為「僅呈現靜態外觀、不可點」，已回寫 spec。
+- 素材只有 `icTabbarFriendsOn`（粉紅）與四個 `Off`（灰），缺各分頁的 On／Off 兩態，
+  故改以 **template rendering + tintColor** 表現選中與否。代價是圖示原本烘焙的顏色被 tint 取代。
+- 中央 KO 按鈕不可點（它不是分頁）。
+
+### ⚠️ 未解：元件尺寸與設計稿有落差
+
+`docs/design-spec.md` **只有色票、字級、間距 token（4／8／12／16），沒有任何元件級尺寸**。
+Step 6a 的所有元件尺寸（頭像 40／52、按鈕 50×24、搜尋框高 36、各種 padding）
+都是我依 375×667 基準推測的，使用者回報與 Zeplin 有落差。
+
+**要補的資料見 sdd-progress「Open questions」。拿到數字前不要再猜著調整。**
+
+### Step 6a 決策
+
+- **`FriendCellContent` 把「哪些元素該出現」抽成純資料映射**（不碰 UIKit）。
+  否則 AC-7／AC-8 只能靠肉眼看畫面；抽出來後可以對三種 status 全覆蓋測試，
+  並且把「邀請中與 ⋯ 互斥」寫成斷言。`FriendCell` 只負責套用結果到 `isHidden`。
+- **元件尺寸放在各 view 內的 `private enum Layout`**。design-spec 只定義了間距 token
+  （4／8／12／16），元件級尺寸（頭像 40／52、按鈕高 24…）沒有 token，
+  以具名常數收在元件內部，符合 rule 6「不在 ViewController 內寫魔術數字」的意圖。
+- **各元件顯式設定 `directionalLayoutMargins` 為 `Spacing.l`**。
+  UIView 預設 layoutMargins 是 8pt，直接用會與設計稿的 16pt 版面差一截。
+- **`AppColor.star` 是近似值。** design-spec §4.5 只寫「黃色實心」沒給 hex，
+  已在程式碼與此處標註，比對設計稿有色差時改一行即可。
+- **TabBar 中央 KO 按鈕以粉紅圓形＋文字繪製**（Zeplin 未匯出該素材）。
+  拿到素材後把 `makeKOButton()` 換成 `UIImageView` 即可。
+  另註：`icTabbarProductsOff` 未對應到 design-spec §4.7 的任何一格，推測是多匯出的。
+- **`tableHeaderView` 以 `systemLayoutSizeFitting` 手動算高**（它不吃 Auto Layout），
+  並在 `viewDidLayoutSubviews` 中以「高度未變就跳過」避免無限重排。
+- **狀態 A 在 6a 先以一行暫時文字帶過**，6b 換成完整空狀態畫面。
+
 ### Step 5 決策
 
 - **素材全部是 Zeplin 匯出的 PDF 向量檔**，以 `Single Scale` + `preserves-vector-representation`
@@ -243,7 +278,15 @@ friend1 的 004/005 同名不同 fid、friend3 的 2 筆 `status == 0`）。
 
 ## Open questions
 
-- 無阻斷性問題。若面試官對 `status` 語意有相反認定，`spec.md` §10 O-1 已說明可一行切換。
+- **元件尺寸缺 Zeplin 數據（阻斷 Step 6a 收尾）。** 需要下列數字才能對齊設計稿：
+  1. Header：大頭貼直徑、header 區塊總高、姓名與 KOKO ID 列的垂直間距
+  2. Tab 列：「好友」「聊天」的水平間距、tab 列總高、指示器寬與高
+  3. 搜尋框：高度、與左右邊界的距離、與加好友按鈕的間距、加好友按鈕尺寸
+  4. 邀請卡片：卡片高、頭像直徑、✓／✕ 直徑、卡片左右邊距、收合時第二張露出的高度
+  5. 好友 cell：列高、頭像直徑、星星尺寸、「轉帳」按鈕寬×高、「邀請中」標籤寬×高
+  6. 底部 TabBar：總高、圖示尺寸、KO 按鈕直徑與凸起高度
+  在 Zeplin 點選圖層即可看到 W／H 與間距。或提供 Zeplin 截圖 + App 截圖對照亦可。
+- 若面試官對 `status` 語意有相反認定，`spec.md` §10 O-1 已說明可一行切換。
 
 ## Next actions
 
@@ -254,10 +297,10 @@ friend1 的 004/005 同名不同 fid、friend3 的 2 筆 `status == 0`）。
 5. ~~PEV Step 3：`APIClient` / `Endpoint` / `FriendRepository`（`async let` 並行）~~ ✓ 測試全過
 6. ~~PEV Step 4：`FriendListViewModel` + `FriendListViewState`~~ ✓ 測試全過（23/23）
 7. ~~PEV Step 5：`DesignSystem/` ＋情境選擇頁 ScenarioPicker~~ ✓ 已完成，**等使用者跑 test 回報**
-8. PEV Step 6：好友列表頁 UI（header／tab／搜尋框／邀請卡片／好友 cell／空狀態／TabBar）
-   ＋三種狀態；完成後刪除 `FriendListProbeViewController`。
-9. PEV Step 7：三項 UI 加分（下拉更新、搜尋框上推、邀請卡片展開收合）。
-10. 最後：錄影（AC-17，涵蓋三種情境與四項加分功能）。
+8. ~~PEV Step 6a：好友列表頁狀態 B／C~~ ✓ 已完成（`FriendListProbeViewController` 已刪除），**等使用者跑 test 與 Cmd+R**
+9. PEV Step 6b：狀態 A 空狀態畫面（插圖＋綠色漸層按鈕＋底部設定 KOKO ID 連結）。
+10. PEV Step 7：三項 UI 加分（下拉更新、搜尋框上推、邀請卡片展開收合動畫）。
+11. 最後：錄影（AC-17，涵蓋三種情境與四項加分功能）。
 
 > 資料層（Model／Network／Repository／ViewModel）到此全部完成，後續都是畫面。
 > 每次動 code 後跑 `./scripts/check-architecture.sh`（不需編譯，agent 可自行執行）。

@@ -67,6 +67,12 @@ enum AppColor {
     /// `#8E8E93` — iOS 系統灰。
     static let systemGrey = hex(0x8E8E93)
 
+    /// 置頂星星。
+    ///
+    /// ⚠️ design-spec §4.5 只寫「黃色實心」，**沒有給 hex**。此為近似值。
+    /// 若比對設計稿有色差，改這一行即可。
+    static let star = hex(0xF8C81C)
+
     // MARK: -
 
     private static func hex(_ value: UInt32, alpha: CGFloat = 1) -> UIColor {
