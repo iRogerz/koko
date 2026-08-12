@@ -15,8 +15,10 @@ import UIKit
 
 final class FriendListViewController: UIViewController {
 
+    /// 尺寸依 design-spec.md §7。
     private enum Layout {
-        static let estimatedRowHeight: CGFloat = 68
+        static let rowHeight: CGFloat = 60
+        static let sectionDividerHeight: CGFloat = 1
     }
 
     private let viewModel: FriendListViewModel
@@ -25,18 +27,36 @@ final class FriendListViewController: UIViewController {
     private var friends: [Friend] = []
     private var isInvitationSectionExpanded = false
 
-    /// 「朋友」以外的分頁、以及「聊天」segment 都只呈現空白（spec.md §11）。
-    private var showsBlankPage: Bool {
-        tabBarView.selectedTab != .friends || tabView.selectedSegment != .friends
+    /// 底部 TabBar 切到「朋友」以外 —— 那是**另一個分頁**，整頁（含 header 與
+    /// 好友／聊天 segment）都換成空白（spec.md §11）。
+    private var showsOtherTabPage: Bool {
+        tabBarView.selectedTab != .friends
+    }
+
+    /// 「聊天」segment —— 仍在同一個分頁裡，**只有 segment 以下的內容區**空白。
+    /// header 與 segment 本身必須留著，否則使用者切不回「好友」。
+    private var showsChatSegment: Bool {
+        tabView.selectedSegment != .friends
     }
 
     // MARK: Views
 
+    private let topActionBarView = TopActionBarView()
     private let profileHeaderView = ProfileHeaderView()
     private let tabView = FriendChatTabView()
     private let invitationSectionView = InvitationSectionView()
     private let searchBarView = FriendSearchBarView()
     private let tabBarView = AppTabBarView()
+
+    /// 上半部（#FCFCFC）與下半部（白）之間的全寬分隔線。
+    /// 它跟著 header 捲動，位置隨邀請卡片區的高度浮動（design-spec §7.1）。
+    private let sectionDivider: UIView = {
+        let view = UIView()
+        view.backgroundColor = AppColor.sectionDivider
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.heightAnchor.constraint(equalToConstant: Layout.sectionDividerHeight).isActive = true
+        return view
+    }()
 
     private lazy var tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .plain)
@@ -45,21 +65,21 @@ final class FriendListViewController: UIViewController {
         tableView.separatorStyle = .none
         tableView.dataSource = self
         tableView.delegate = self
-        tableView.rowHeight = UITableView.automaticDimension
-        tableView.estimatedRowHeight = Layout.estimatedRowHeight
+        tableView.rowHeight = Layout.rowHeight
         tableView.keyboardDismissMode = .onDrag
         tableView.register(FriendCell.self, forCellReuseIdentifier: FriendCell.reuseIdentifier)
         return tableView
     }()
 
     /// tableHeaderView 的內容。Auto Layout 算完高度後手動指定 frame。
+    ///
+    /// **順序照設計稿**：邀請卡片區在好友／聊天 tab 列**之上**（spec.md §6.2 → §6.3）。
+    /// 各區塊自己帶背景色與內距，這裡不再補間距。
     private lazy var headerStack: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [
-            profileHeaderView, tabView, invitationSectionView, searchBarView,
+            profileHeaderView, invitationSectionView, tabView, sectionDivider, searchBarView,
         ])
         stack.axis = .vertical
-        stack.setCustomSpacing(Spacing.m, after: tabView)
-        stack.setCustomSpacing(Spacing.m, after: invitationSectionView)
         return stack
     }()
 
@@ -99,8 +119,12 @@ final class FriendListViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        view.backgroundColor = AppColor.surface
-        navigationItem.largeTitleDisplayMode = .never
+        // 上半部底色。下半部的白由 tableView 自己出。
+        view.backgroundColor = AppColor.cardBackground
+
+        // 設計稿沒有 navigation bar，頂部就是 TopActionBarView。
+        // 藏掉 nav bar 會連帶停用邊緣滑動返回，所以要自己接回 delegate。
+        navigationController?.interactivePopGestureRecognizer?.delegate = self
 
         setUpLayout()
         bindViews()
@@ -112,6 +136,17 @@ final class FriendListViewController: UIViewController {
         Task { await viewModel.load() }
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        // 情境選擇頁還要用 nav bar，離開時還原。
+        navigationController?.setNavigationBarHidden(false, animated: animated)
+    }
+
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         sizeTableHeaderToFit()
@@ -120,25 +155,35 @@ final class FriendListViewController: UIViewController {
     // MARK: - Setup
 
     private func setUpLayout() {
+        view.addSubview(topActionBarView)
         view.addSubview(tableView)
         view.addSubview(blankPageView)
         view.addSubview(tabBarView)
         view.addSubview(temporaryEmptyLabel)
+        topActionBarView.translatesAutoresizingMaskIntoConstraints = false
         tabBarView.translatesAutoresizingMaskIntoConstraints = false
 
         tableView.tableHeaderView = headerStack
 
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            // 頂部功能列不捲動，固定在 safe area 上緣。
+            topActionBarView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            topActionBarView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            topActionBarView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+
+            tableView.topAnchor.constraint(equalTo: topActionBarView.bottomAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: tabBarView.topAnchor),
 
+            // 延伸到螢幕最底，底色才會蓋滿 home indicator 那一段
+            // （設計稿的 iPhone 8 沒有 home indicator，切在 safe area 會露出一條空白）。
+            // 圖示列停在 safe area，由 AppTabBarView 內部處理。
             tabBarView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tabBarView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tabBarView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            tabBarView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
 
-            blankPageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            blankPageView.topAnchor.constraint(equalTo: topActionBarView.bottomAnchor),
             blankPageView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             blankPageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             blankPageView.bottomAnchor.constraint(equalTo: tabBarView.topAnchor),
@@ -203,12 +248,18 @@ final class FriendListViewController: UIViewController {
         profileHeaderView.configure(with: state.user)
         tabView.setInvitationCount(state.content.invitationBadgeCount)
 
-        // 空白分頁蓋住內容區，但 header／tab／TabBar 仍在，切回來即恢復。
-        blankPageView.isHidden = !showsBlankPage
-        tabView.isHidden = tabBarView.selectedTab != .friends
+        // 另一個分頁：整頁蓋掉。資料不動，切回「朋友」即恢復。
+        blankPageView.isHidden = !showsOtherTabPage
 
-        guard !showsBlankPage else {
+        // 「聊天」：不蓋整頁，改成把 segment 以下的內容清空 ——
+        // 邀請區與搜尋框收合、清單 0 列，header 與 segment 自然留在原位。
+        guard !showsOtherTabPage, !showsChatSegment else {
+            friends = []
+            invitationSectionView.isHidden = true
+            searchBarView.isHidden = true
             temporaryEmptyLabel.isHidden = true
+            tableView.reloadData()
+            view.setNeedsLayout()
             return
         }
 
@@ -285,5 +336,19 @@ extension FriendListViewController: UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
+    }
+}
+
+// MARK: - UIGestureRecognizerDelegate
+
+extension FriendListViewController: UIGestureRecognizerDelegate {
+
+    /// 藏掉 navigation bar 後，UIKit 會停用邊緣滑動返回。接回 delegate 讓它繼續有效，
+    /// 但只在真的有上一頁時才允許 —— 在根畫面觸發會讓 navigation stack 卡住。
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard gestureRecognizer === navigationController?.interactivePopGestureRecognizer else {
+            return true
+        }
+        return (navigationController?.viewControllers.count ?? 0) > 1
     }
 }

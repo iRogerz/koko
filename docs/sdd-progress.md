@@ -1,6 +1,6 @@
 # SDD Progress — KOKO 好友列表（國泰世華 iOS 面試考題）
 
-Last updated: 2026-08-08
+Last updated: 2026-08-12
 
 ## Current phase
 
@@ -117,15 +117,57 @@ Last updated: 2026-08-08
   原 spec §11 訂為「僅呈現靜態外觀、不可點」，已回寫 spec。
 - 素材只有 `icTabbarFriendsOn`（粉紅）與四個 `Off`（灰），缺各分頁的 On／Off 兩態，
   故改以 **template rendering + tintColor** 表現選中與否。代價是圖示原本烘焙的顏色被 tint 取代。
-- 中央 KO 按鈕不可點（它不是分頁）。
+- ~~中央 KO 按鈕不可點（它不是分頁）。~~ **2026-08-12 再次變更：KO 也是可切換的分頁**，
+  內容同樣是空白畫面。它沒有選中版素材，所以是唯一沒有選中樣式的分頁。
 
-### ⚠️ 未解：元件尺寸與設計稿有落差
+### Step 6a 對稿修正（2026-08-12，已完成，等使用者驗證）
 
-`docs/design-spec.md` **只有色票、字級、間距 token（4／8／12／16），沒有任何元件級尺寸**。
-Step 6a 的所有元件尺寸（頭像 40／52、按鈕 50×24、搜尋框高 36、各種 padding）
-都是我依 375×667 基準推測的，使用者回報與 Zeplin 有落差。
+依 `docs/design-spec.md` §7 的量測值，把下列六項改成與設計稿一致：
 
-**要補的資料見 sdd-progress「Open questions」。拿到數字前不要再猜著調整。**
+| # | 內容 | 動到的檔 |
+|---|---|---|
+| 1 | 邀請卡片區移到 tab 列**之上** | `FriendListViewController` |
+| 2 | 新增頂部功能列（ATM／換匯／掃描），並**隱藏 navigation bar**、以邊緣滑動返回 | `TopActionBarView`（新）、`FriendListViewController` |
+| 3 | 頁面邊距 16 → **30**（新增 `Spacing.pageMargin`／`navMargin`） | `Spacing` 與五個 view |
+| 4 | 上下兩塊背景 ＋ 全寬分隔線（新增 `AppColor.sectionDivider`） | `AppColor`、各 view、`FriendListViewController` |
+| 5 | cell 列高 60、星星不推開頭像、分隔線對齊姓名、按鈕尺寸對稿 | `FriendCell` |
+| 6 | KO 按鈕改用素材原色並依比例放大（圓只佔素材寬 57.6%，寫 50×50 會縮成 29） | `AppTabBarView` |
+
+同時對齊：header 84 高、tab 列 42 高、指示器 20×4、搜尋框上下 15／9、
+卡片 315×70／內距 15／✓✕ 30、收合 peek 10。
+
+追加（同日第二輪回饋）：
+
+| # | 內容 | 動到的檔 |
+|---|---|---|
+| 7 | TabBar 底色延伸到**螢幕最底**，圖示列停在 safe area | `AppTabBarView`、`FriendListViewController` |
+| 8 | **KO 也是可切換的分頁**（`Tab.ko` + `point(inside:)` 收凸出去那截的觸控） | `AppTabBarView` |
+| 9 | KO 選中時 KO 字轉粉紅（Zeplin 缺 On 版素材，就地換色） | `UIImage+Recolor.swift`（新）、`AppTabBarView` |
+
+確認：「聊天」segment 時邀請卡片區**本來就會收掉**（`render` 的 guard 分支已設 `isHidden`），
+先前記為「待決」是誤記，無需改 code。
+
+### 設計稿量測後發現的結構性落差（2026-08-12，**已於上一節修正**）
+
+拿到三張設計稿 PNG 後逐項量測（結果見 `docs/design-spec.md` §7），發現的不只是尺寸：
+
+1. **邀請卡片區的位置錯了。** 設計稿是 `header → 邀請卡片 → 好友/聊天 tab`，
+   目前實作是 `header → tab → 邀請卡片`。`spec.md` §6 的小節順序（6.2 卡片、6.3 tab）
+   其實也是對的，是實作沒照著做。
+2. **缺頂部 nav 圖示列**（ATM／換匯／掃描，24×24，左右邊距 20），三張稿都有。
+   而且設計稿**沒有 navigation bar 也沒有返回鍵** —— 目前被 push 多出來的那條要拿掉。
+3. **頁面左右邊距是 30pt**，不是目前用的 `Spacing.l`(16)。
+4. **背景分上下兩塊**：上半 `#FCFCFC`（nav＋header＋卡片＋tab），下半 `#FFFFFF`
+   （搜尋框＋清單），中間 1pt `#EFEFEF` 全寬分隔線。分界線位置隨卡片區高度浮動。
+5. **好友 cell 分隔線內縮到姓名位置**（leading 105.5pt），不是全寬。
+6. **中央 KO 按鈕是淺灰不是粉紅** —— 直接用 `icTabbarHomeOff` 原色素材。已修。
+
+### ⚠️ 已解除：元件尺寸與設計稿有落差
+
+Step 6a 的元件尺寸原本全是依 375×667 推測的，使用者回報與 Zeplin 有落差。
+**2026-08-12 已從設計稿 PNG 量測補齊，寫在 `docs/design-spec.md` §7。**
+巧合的是頭像 40／52、按鈕高 24、搜尋框高 36 猜對了，但邊距（30 而非 16）、
+cell 列高（60）、TabBar 圖示（27×42）都是錯的。**以後查 §7，不要再猜。**
 
 ### Step 6a 決策
 
@@ -145,6 +187,37 @@ Step 6a 的所有元件尺寸（頭像 40／52、按鈕 50×24、搜尋框高 36
 - **`tableHeaderView` 以 `systemLayoutSizeFitting` 手動算高**（它不吃 Auto Layout），
   並在 `viewDidLayoutSubviews` 中以「高度未變就跳過」避免無限重排。
 - **狀態 A 在 6a 先以一行暫時文字帶過**，6b 換成完整空狀態畫面。
+
+### Step 6a 修正（2026-08-12，使用者跑 Cmd+R 後回報）
+
+**1. 錢錢分頁接錯素材。** Zeplin 的**檔名與分頁名稱對不起來**，之前照檔名直覺對應而接錯：
+
+| 分頁 | 正確素材 | 原本誤接 |
+|---|---|---|
+| 錢錢 | `icTabbarProductsOff`（錢袋＋星星） | ~~`icTabbarHomeOff`~~ |
+| 朋友 | `icTabbarFriendsOn` | — |
+| 記帳 | `icTabbarManageOff` | — |
+| 設定 | `icTabbarSettingOff` | — |
+| 中央 KO 按鈕 | `icTabbarHomeOff`（灰／含 TabBar 凹口造型） | 之前記為「Zeplin 未匯出」，**錯誤，已更正** |
+
+`icTabbarHomeOff` 是 KO 圖在淺色圓形裡，被 `.alwaysTemplate` 壓成實心後就是畫面上那團灰色色塊。
+**教訓：素材要看圖辨認，不能照檔名猜。**（用 `sips -s format png` 把 PDF 轉出來看即可。）
+
+**2. 分頁素材已內含分頁名稱文字。** 四張都是 78×128 的 icon＋文字合成圖，
+原本又疊了一個 `UILabel`，所以「記帳」「設定」在畫面上各出現兩次。
+已移除 `TabItemView` 的 label，`Tab.title` 只留給 accessibility；
+寬度改由素材的 78:128 比例推導（原本寫死 24×24 會把合成圖壓扁）。
+
+**3. 「好友／聊天」segment 切換範圍過大。** 原本 `showsBlankPage` 把
+bottom TabBar 與 segment 兩件事混在同一個布林值，`blankPageView` 從 safe area 頂端蓋到
+TabBar，連 header 與 segment 本身都蓋掉（使用者甚至點不回「好友」）。已拆成兩個概念：
+
+- `showsOtherTabPage`（底部 TabBar 切到「朋友」以外）→ 那是**另一個分頁**，整頁蓋掉，維持用 `blankPageView`。
+- `showsChatSegment`（「聊天」）→ 仍在同一分頁，**只清空 segment 以下的內容**：
+  邀請區與搜尋框 `isHidden`、清單 0 列。header 與 segment 自然留在原位，不使用任何遮罩。
+
+結構上的防線：segment 這條路徑**完全不碰 `blankPageView`**，
+所以「切 segment 蓋掉 header」在實作上不再可能發生。
 
 ### Step 5 決策
 
@@ -275,18 +348,31 @@ friend1 的 004/005 同名不同 fid、friend3 的 2 筆 `status == 0`）。
 | 下拉更新時清掉搜尋關鍵字／閃回骨架 | `test_refresh_keepsActiveKeyword`、`test_refresh_doesNotShowLoadingState` | 測試 |
 | 邀請 ✓/✕ 偷打後端 API | `test_respondToInvitation_removesItLocally` 斷言 loadCount 不變（§6.2） | 測試 |
 | **架構規則靠人工 grep 檢查（會被註解誤導）** | `scripts/check-architecture.sh` —— 行首比對 import、涵蓋 rule 1/2、SwiftUI、Storyboard、邀請判定集中性；已做負面測試確認會回非零 exit code | 腳本 |
+| **照 Zeplin 檔名猜素材用途（錢錢接到 KO 按鈕的圖）** | `test_centerKOAsset_isNotUsedByAnyTab`、`test_eachTab_mapsToDistinctAsset` | 測試 |
+| 分頁素材已內含文字，又疊一個 UILabel 造成文字重複 | `test_tabBar_doesNotRenderTabTitlesAsLabels`（遞迴掃 UILabel，出現分頁名稱即失敗）、`test_tabAssets_areIconWithLabelComposites`（比例守住「合成圖」前提） | 測試 |
+| 切「聊天」segment 連 header 一起蓋掉 | `showsOtherTabPage` / `showsChatSegment` 拆開，segment 路徑不碰 `blankPageView` | 型別／流程設計 |
+| **邀請卡片區被排到 tab 列之下**（畫面不會壞，只是位置錯） | `scripts/check-architecture.sh` 規則 6 —— 比對 `headerStack` 陣列裡兩者的先後；已用假違規驗證會回 exit 1 | lint 腳本 |
+| **星星把頭像推開，有／無星星的列對不齊** | `test_avatarPosition_isUnaffectedByStar` —— 直接斷言兩種列的頭像 `minX` 相同且為 50 | 測試 |
+| cell 列高被內容撐開 | `test_rowHeight_is60` | 測試 |
+| 照 Zeplin 檔名猜素材尺寸（KO 圓只佔素材寬 57.6%） | `AppTabBarView.Layout` 記下比例推導；`test_centerKOButton_isNotTemplateRendered` | 註解＋測試 |
+| 用 `withTintColor` 做 KO 選中態（會把整張壓成一團粉紅） | `test_tintColor_flattensEveryOpaqueColor_soItCannotBeUsedInstead` —— 直接把 tintColor 的行為釘成對照組，說明為何不能拿它取代 `replacingColor` | 測試 |
+| `replacingColor` 誤傷透明區或其他顏色 | `test_replacingColor_changesOnlyTheMatchingColor`、`test_replacingColor_keepsTransparentPixelsTransparent` | 測試 |
 
 ## Open questions
 
-- **元件尺寸缺 Zeplin 數據（阻斷 Step 6a 收尾）。** 需要下列數字才能對齊設計稿：
-  1. Header：大頭貼直徑、header 區塊總高、姓名與 KOKO ID 列的垂直間距
-  2. Tab 列：「好友」「聊天」的水平間距、tab 列總高、指示器寬與高
-  3. 搜尋框：高度、與左右邊界的距離、與加好友按鈕的間距、加好友按鈕尺寸
-  4. 邀請卡片：卡片高、頭像直徑、✓／✕ 直徑、卡片左右邊距、收合時第二張露出的高度
-  5. 好友 cell：列高、頭像直徑、星星尺寸、「轉帳」按鈕寬×高、「邀請中」標籤寬×高
-  6. 底部 TabBar：總高、圖示尺寸、KO 按鈕直徑與凸起高度
-  在 Zeplin 點選圖層即可看到 W／H 與間距。或提供 Zeplin 截圖 + App 截圖對照亦可。
+- ~~元件尺寸缺 Zeplin 數據~~ ✓ **已解除（2026-08-12）**。使用者提供三張設計稿 PNG
+  （750×1334 @2x），已逐項量測寫入 `docs/design-spec.md` §7。**不要再猜尺寸，去查 §7。**
+- **缺 KO 按鈕的 On（粉紅）版素材。** 目前用 `UIImage+Recolor.swift` 就地換色頂著。
+  Zeplin 上照命名慣例應該有 `icTabbarHomeOn`（就像已有的 `icTabbarFriendsOn`），
+  匯出後把該檔與呼叫端一起刪掉。
 - 若面試官對 `status` 語意有相反認定，`spec.md` §10 O-1 已說明可一行切換。
+
+### 設計稿量測方法（2026-08-12，可重複執行）
+
+設計稿是 750×1334 的 PNG（@2x），**量到的 px ÷ 2 就是 pt**，不需要 Zeplin 帳號。
+用純 stdlib 的 PNG 解碼（`zlib` + unfilter）掃描指定列／欄的 run-length，
+邊界（分隔線、按鈕外框、圓形邊緣）會直接以色塊長度呈現，比目測準得多。
+腳本留在 scratchpad，重點是方法：**掃 run-length 找邊界，不要用眼睛估**。
 
 ## Next actions
 

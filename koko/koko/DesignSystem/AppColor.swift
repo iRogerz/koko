@@ -55,6 +55,10 @@ enum AppColor {
     /// `#EFEFEF` — 搜尋框底色。（Zeplin: transferMoney，白 239）
     static let searchBarBackground = hex(0xEFEFEF)
 
+    /// `#EFEFEF` — 上半部／下半部的全寬分隔線，以及 TabBar 上緣線（design-spec §7.1、§7.8）。
+    /// 與 cell 之間的 `separator`(#E4E4E4) 是不同的兩條線，量測值確實不同。
+    static let sectionDivider = hex(0xEFEFEF)
+
     /// `#F5F5F5` — 頁面底色。（Zeplin: white）
     static let pageBackground = hex(0xF5F5F5)
 

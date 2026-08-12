@@ -21,4 +21,14 @@ enum Spacing {
 
     /// 16pt
     static let l: CGFloat = 16
+
+    /// 30pt — 頁面左右邊距（design-spec §7.1）。
+    ///
+    /// 搜尋框、邀請卡片、header 姓名、tab 列、cell 星星全部對齊這條線。
+    /// 這不是 §3 的間距階梯，而是版面基準，所以獨立命名。
+    static let pageMargin: CGFloat = 30
+
+    /// 20pt — 頂部 nav 圖示列的左右邊距（design-spec §7.2）。
+    /// 設計稿上這是唯一比內容窄的一列。
+    static let navMargin: CGFloat = 20
 }

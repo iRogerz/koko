@@ -13,10 +13,17 @@ import UIKit
 
 final class FriendSearchBarView: UIView {
 
+    /// 尺寸依 design-spec.md §7.6。
     private enum Layout {
         static let fieldHeight: CGFloat = 36
         static let iconSize: CGFloat = 16
         static let addFriendSize: CGFloat = 24
+        /// 與上方那條全寬分隔線的距離。
+        static let topPadding: CGFloat = 15
+        /// 與清單第一列的距離。
+        static let bottomPadding: CGFloat = 9
+        /// 搜尋框與加好友按鈕的間距（設計稿：306 → 321）。
+        static let addFriendSpacing: CGFloat = 15
     }
 
     private enum Text {
@@ -69,8 +76,11 @@ final class FriendSearchBarView: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        // 搜尋框已經在分隔線之下的白色區。
         backgroundColor = AppColor.surface
-        directionalLayoutMargins = .init(top: 0, leading: Spacing.l, bottom: 0, trailing: Spacing.l)
+        directionalLayoutMargins = .init(
+            top: 0, leading: Spacing.pageMargin, bottom: 0, trailing: Spacing.pageMargin
+        )
 
         addSubview(container)
         addSubview(addFriendButton)
@@ -82,11 +92,13 @@ final class FriendSearchBarView: UIView {
 
         NSLayoutConstraint.activate([
             container.leadingAnchor.constraint(equalTo: layoutMarginsGuide.leadingAnchor),
-            container.topAnchor.constraint(equalTo: topAnchor, constant: Spacing.s),
-            container.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -Spacing.s),
+            container.topAnchor.constraint(equalTo: topAnchor, constant: Layout.topPadding),
+            container.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -Layout.bottomPadding),
             container.heightAnchor.constraint(equalToConstant: Layout.fieldHeight),
 
-            addFriendButton.leadingAnchor.constraint(equalTo: container.trailingAnchor, constant: Spacing.m),
+            addFriendButton.leadingAnchor.constraint(
+                equalTo: container.trailingAnchor, constant: Layout.addFriendSpacing
+            ),
             addFriendButton.trailingAnchor.constraint(equalTo: layoutMarginsGuide.trailingAnchor),
             addFriendButton.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             addFriendButton.widthAnchor.constraint(equalToConstant: Layout.addFriendSize),

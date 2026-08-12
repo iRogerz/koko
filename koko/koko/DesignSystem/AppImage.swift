@@ -27,12 +27,26 @@ enum AppImage: String, CaseIterable {
     case addFriend = "icBtnAddFriends"
 
     // MARK: 底部 TabBar
+    //
+    // ⚠️ 四個分頁素材**已內含分頁名稱文字**（icon + label 合成圖，78×128），
+    // 呼叫端不可再另外加 UILabel，否則文字會出現兩次。
+    //
+    // ⚠️ Zeplin 檔名與分頁名稱**對不起來**，只能看圖辨認（已逐張確認）：
+    //   `icTabbarProductsOff` 是錢錢、`icTabbarManageOff` 是記帳、
+    //   `icTabbarHomeOff` 不是分頁，是中央的 KO 按鈕。
 
-    case tabHome = "icTabbarHomeOff"
-    case tabProducts = "icTabbarProductsOff"
-    case tabFriendsSelected = "icTabbarFriendsOn"
+    /// 錢錢（錢袋 + 星星）。
+    case tabMoney = "icTabbarProductsOff"
+    /// 朋友。唯一的選中態（粉紅）素材。
+    case tabFriends = "icTabbarFriendsOn"
+    /// 記帳。
     case tabAccounting = "icTabbarManageOff"
+    /// 設定。
     case tabSettings = "icTabbarSettingOff"
+
+    /// 中央 KO 按鈕的**未選中（灰）**版本，含 TabBar 上緣的凹口造型。
+    /// 設計稿上的 KO 是粉紅實心，Zeplin 未匯出該版本，見 `AppTabBarView.makeKOButton()`。
+    case tabCenterKOOff = "icTabbarHomeOff"
 
     // MARK: KO 功能圖示
 

@@ -12,14 +12,18 @@ import UIKit
 
 final class InvitationCardView: UIView {
 
+    /// 尺寸依 design-spec.md §7.5。
     private enum Layout {
+        static let height: CGFloat = 70
         static let avatarSize: CGFloat = 40
-        static let actionSize: CGFloat = 24
+        static let actionSize: CGFloat = 30
+        static let actionSpacing: CGFloat = 15
+        /// 卡片四邊內距一致。
+        static let padding: CGFloat = 15
         static let cornerRadius: CGFloat = 6
         static let shadowRadius: CGFloat = 4
         static let shadowOpacity: Float = 0.15
         static let shadowOffset = CGSize(width: 0, height: 2)
-        static let verticalPadding: CGFloat = 14
     }
 
     private enum Text {
@@ -58,7 +62,8 @@ final class InvitationCardView: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
 
-        backgroundColor = AppColor.cardBackground
+        // 卡片浮在 #FCFCFC 的上半部之上，本身是純白才有層次。
+        backgroundColor = AppColor.surface
         layer.cornerRadius = Layout.cornerRadius
         layer.shadowColor = UIColor.black.cgColor
         layer.shadowRadius = Layout.shadowRadius
@@ -73,21 +78,22 @@ final class InvitationCardView: UIView {
 
         let actions = UIStackView(arrangedSubviews: [acceptButton, rejectButton])
         actions.axis = .horizontal
-        actions.spacing = Spacing.m
+        actions.spacing = Layout.actionSpacing
 
         let row = UIStackView(arrangedSubviews: [avatarView, textColumn, actions])
         row.translatesAutoresizingMaskIntoConstraints = false
         row.axis = .horizontal
         row.alignment = .center
-        row.spacing = Spacing.m
+        row.spacing = Layout.padding
 
         addSubview(row)
 
         NSLayoutConstraint.activate([
-            row.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Spacing.l),
-            row.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Spacing.l),
-            row.topAnchor.constraint(equalTo: topAnchor, constant: Layout.verticalPadding),
-            row.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -Layout.verticalPadding),
+            heightAnchor.constraint(equalToConstant: Layout.height),
+
+            row.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Layout.padding),
+            row.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Layout.padding),
+            row.centerYAnchor.constraint(equalTo: centerYAnchor),
 
             avatarView.widthAnchor.constraint(equalToConstant: Layout.avatarSize),
             avatarView.heightAnchor.constraint(equalToConstant: Layout.avatarSize),

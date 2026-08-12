@@ -24,11 +24,16 @@ final class FriendChatTabView: UIView {
         }
     }
 
+    /// 尺寸依 design-spec.md §7.4。
     private enum Layout {
-        static let indicatorHeight: CGFloat = 2
+        static let indicatorHeight: CGFloat = 4
         static let indicatorWidth: CGFloat = 20
-        static let itemSpacing: CGFloat = 36
-        static let verticalPadding: CGFloat = 14
+        /// 「聊天」的 leading 相對「好友」是**固定**的 —— 設計稿上兩張稿的「聊天」
+        /// 都在 x=94.5，好友 badge 出現時不會把它推開。用固定距離才對得上。
+        static let chatsOffset: CGFloat = 62.5
+        /// tab 列總高（150 → 191.5）。指示器貼底，文字距上緣 14。
+        static let height: CGFloat = 42
+        static let topPadding: CGFloat = 14
     }
 
     private enum Text {
@@ -59,8 +64,10 @@ final class FriendChatTabView: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = AppColor.surface
-        directionalLayoutMargins = .init(top: 0, leading: Spacing.l, bottom: 0, trailing: Spacing.l)
+        backgroundColor = AppColor.cardBackground
+        directionalLayoutMargins = .init(
+            top: 0, leading: Spacing.pageMargin, bottom: 0, trailing: Spacing.pageMargin
+        )
 
         friendsBadge.isHidden = true
         chatsBadge.setText(Text.chatBadge)
@@ -71,21 +78,32 @@ final class FriendChatTabView: UIView {
         friendsButton.addTarget(self, action: #selector(friendsTapped), for: .touchUpInside)
         chatsButton.addTarget(self, action: #selector(chatsTapped), for: .touchUpInside)
 
-        let row = UIStackView(arrangedSubviews: [friendsItem, chatsItem])
-        row.translatesAutoresizingMaskIntoConstraints = false
-        row.axis = .horizontal
-        row.alignment = .center
-        row.spacing = Layout.itemSpacing
-
-        addSubview(row)
+        addSubview(friendsItem)
+        addSubview(chatsItem)
         addSubview(indicator)
 
-        NSLayoutConstraint.activate([
-            row.leadingAnchor.constraint(equalTo: layoutMarginsGuide.leadingAnchor),
-            row.topAnchor.constraint(equalTo: topAnchor, constant: Layout.verticalPadding),
-            row.trailingAnchor.constraint(lessThanOrEqualTo: layoutMarginsGuide.trailingAnchor),
+        // 設計稿的固定距離；好友 badge 變寬（三位數）時讓位給下面的防重疊約束。
+        let chatsOffset = chatsItem.leadingAnchor.constraint(
+            equalTo: friendsItem.leadingAnchor, constant: Layout.chatsOffset
+        )
+        chatsOffset.priority = .defaultHigh
 
-            indicator.topAnchor.constraint(equalTo: row.bottomAnchor, constant: Layout.verticalPadding),
+        NSLayoutConstraint.activate([
+            // 總高固定，指示器貼底 —— 文字的行高會隨字體版本浮動，
+            // 用「文字高 + 間距」相加會讓整列跟著飄。
+            heightAnchor.constraint(equalToConstant: Layout.height),
+
+            friendsItem.leadingAnchor.constraint(equalTo: layoutMarginsGuide.leadingAnchor),
+            friendsItem.topAnchor.constraint(equalTo: topAnchor, constant: Layout.topPadding),
+
+            chatsOffset,
+            chatsItem.leadingAnchor.constraint(
+                greaterThanOrEqualTo: friendsItem.trailingAnchor, constant: Spacing.s
+            ),
+            chatsItem.centerYAnchor.constraint(equalTo: friendsItem.centerYAnchor),
+            chatsItem.trailingAnchor.constraint(lessThanOrEqualTo: layoutMarginsGuide.trailingAnchor),
+
+            // 指示器貼齊上半部底緣，與下方的全寬分隔線相接。
             indicator.bottomAnchor.constraint(equalTo: bottomAnchor),
             indicator.widthAnchor.constraint(equalToConstant: Layout.indicatorWidth),
             indicator.heightAnchor.constraint(equalToConstant: Layout.indicatorHeight),

@@ -12,11 +12,15 @@ import UIKit
 
 final class ProfileHeaderView: UIView {
 
+    /// 尺寸依 design-spec.md §7.3。
     private enum Layout {
         static let avatarSize: CGFloat = 52
         static let chevronSize: CGFloat = 10
         static let dotSize: CGFloat = 6
-        static let verticalPadding: CGFloat = 20
+        /// 大頭貼上下各留 16，header 總高 84。
+        static let verticalPadding: CGFloat = 16
+        /// 姓名與 KOKO ID 列的垂直間距。
+        static let textSpacing: CGFloat = 12
     }
 
     private enum Text {
@@ -55,8 +59,11 @@ final class ProfileHeaderView: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = AppColor.surface
-        directionalLayoutMargins = .init(top: 0, leading: Spacing.l, bottom: 0, trailing: Spacing.l)
+        // 上半部（nav／header／邀請卡片／tab）統一是 #FCFCFC，不是純白。
+        backgroundColor = AppColor.cardBackground
+        directionalLayoutMargins = .init(
+            top: 0, leading: Spacing.pageMargin, bottom: 0, trailing: Spacing.pageMargin
+        )
 
         let kokoIDRow = UIStackView(arrangedSubviews: [kokoIDLabel, chevron, unsetDot])
         kokoIDRow.axis = .horizontal
@@ -67,19 +74,20 @@ final class ProfileHeaderView: UIView {
         textColumn.translatesAutoresizingMaskIntoConstraints = false
         textColumn.axis = .vertical
         textColumn.alignment = .leading
-        textColumn.spacing = Spacing.s
+        textColumn.spacing = Layout.textSpacing
 
         addSubview(textColumn)
         addSubview(avatarView)
 
         NSLayoutConstraint.activate([
             textColumn.leadingAnchor.constraint(equalTo: layoutMarginsGuide.leadingAnchor),
-            textColumn.topAnchor.constraint(equalTo: topAnchor, constant: Layout.verticalPadding),
-            textColumn.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -Layout.verticalPadding),
+            textColumn.centerYAnchor.constraint(equalTo: avatarView.centerYAnchor),
             textColumn.trailingAnchor.constraint(lessThanOrEqualTo: avatarView.leadingAnchor, constant: -Spacing.m),
 
+            // 高度由大頭貼決定（52 + 上下各 16 = 84），文字再置中對齊它。
+            avatarView.topAnchor.constraint(equalTo: topAnchor, constant: Layout.verticalPadding),
+            avatarView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -Layout.verticalPadding),
             avatarView.trailingAnchor.constraint(equalTo: layoutMarginsGuide.trailingAnchor),
-            avatarView.centerYAnchor.constraint(equalTo: textColumn.centerYAnchor),
             avatarView.widthAnchor.constraint(equalToConstant: Layout.avatarSize),
             avatarView.heightAnchor.constraint(equalToConstant: Layout.avatarSize),
 

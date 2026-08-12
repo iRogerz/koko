@@ -13,13 +13,18 @@ import UIKit
 
 final class InvitationSectionView: UIView {
 
+    /// 尺寸依 design-spec.md §7.5。
     private enum Layout {
         /// 收合時，後方卡片露出的高度。
-        static let peekHeight: CGFloat = 6
+        static let peekHeight: CGFloat = 10
         /// 收合時，後方卡片左右內縮的量，做出錯位堆疊感。
-        static let peekInset: CGFloat = 8
+        static let peekInset: CGFloat = 10
         static let expandedSpacing: CGFloat = Spacing.s
         static let maximumPeekCards = 1
+        /// 與上方 header 的距離。
+        static let topMargin: CGFloat = 19
+        /// 與下方好友／聊天 tab 列的距離。
+        static let bottomMargin: CGFloat = 8
     }
 
     private(set) var isExpanded = false
@@ -35,7 +40,8 @@ final class InvitationSectionView: UIView {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = .clear
+        // 卡片區位在 header 與 tab 列之間，屬於 #FCFCFC 的上半部。
+        backgroundColor = AppColor.cardBackground
 
         let tap = UITapGestureRecognizer(target: self, action: #selector(toggle))
         addGestureRecognizer(tap)
@@ -90,26 +96,28 @@ final class InvitationSectionView: UIView {
 
         for (index, card) in cards.enumerated() {
             NSLayoutConstraint.activate([
-                card.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Spacing.l),
-                card.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Spacing.l),
+                card.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Spacing.pageMargin),
+                card.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Spacing.pageMargin),
                 card.topAnchor.constraint(
                     equalTo: previousBottom,
-                    constant: index == 0 ? 0 : Layout.expandedSpacing
+                    constant: index == 0 ? Layout.topMargin : Layout.expandedSpacing
                 ),
             ])
             previousBottom = card.bottomAnchor
         }
 
-        cards.last.map { bottomAnchor.constraint(equalTo: $0.bottomAnchor).isActive = true }
+        cards.last.map {
+            bottomAnchor.constraint(equalTo: $0.bottomAnchor, constant: Layout.bottomMargin).isActive = true
+        }
     }
 
     private func layoutCollapsed() {
         guard let front = cards.first else { return }
 
         NSLayoutConstraint.activate([
-            front.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Spacing.l),
-            front.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Spacing.l),
-            front.topAnchor.constraint(equalTo: topAnchor),
+            front.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Spacing.pageMargin),
+            front.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Spacing.pageMargin),
+            front.topAnchor.constraint(equalTo: topAnchor, constant: Layout.topMargin),
         ])
 
         // 墊底的那張只露出 peekHeight，並左右內縮做出堆疊感。
@@ -119,10 +127,12 @@ final class InvitationSectionView: UIView {
                 behind.leadingAnchor.constraint(equalTo: front.leadingAnchor, constant: Layout.peekInset),
                 behind.trailingAnchor.constraint(equalTo: front.trailingAnchor, constant: -Layout.peekInset),
                 behind.topAnchor.constraint(equalTo: front.topAnchor, constant: Layout.peekHeight),
-                bottomAnchor.constraint(equalTo: behind.bottomAnchor),
+                bottomAnchor.constraint(equalTo: behind.bottomAnchor, constant: Layout.bottomMargin),
             ])
         } else {
-            bottomAnchor.constraint(equalTo: front.bottomAnchor).isActive = true
+            bottomAnchor.constraint(
+                equalTo: front.bottomAnchor, constant: Layout.bottomMargin
+            ).isActive = true
         }
     }
 

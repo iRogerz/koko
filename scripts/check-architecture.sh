@@ -118,6 +118,39 @@ check_no_swiftui() {
     fi
 }
 
+# ---------------------------------------------------------------------------
+# 規則 6：邀請卡片區必須排在好友／聊天 tab 列「之上」
+#
+# 設計稿（三張稿一致）與 spec.md §6 的小節順序都是
+# header → 邀請卡片 → tab 列。Step 6a 曾經做反，畫面上不會壞掉、
+# 只是位置不對，肉眼比對設計稿才看得出來 —— 所以釘在這裡。
+# ---------------------------------------------------------------------------
+check_header_order() {
+    local file='koko/koko/Scene/FriendList/FriendListViewController.swift'
+    local stack invitation tab
+
+    if [ ! -f "$file" ]; then
+        fail "找不到 ${file}"
+        return
+    fi
+
+    # 取 headerStack 的 arrangedSubviews 陣列內容（跨行）。
+    stack=$(sed -n '/UIStackView(arrangedSubviews:/,/\])/p' "$file" | tr -d ' \n')
+    invitation=$(printf '%s' "$stack" | grep -bo 'invitationSectionView' | head -1 | cut -d: -f1)
+    tab=$(printf '%s' "$stack" | grep -bo 'tabView' | head -1 | cut -d: -f1)
+
+    if [ -z "$invitation" ] || [ -z "$tab" ]; then
+        fail "headerStack 找不到 invitationSectionView 或 tabView"
+        return
+    fi
+
+    if [ "$invitation" -lt "$tab" ]; then
+        pass "邀請卡片區排在 tab 列之上"
+    else
+        fail "邀請卡片區排在 tab 列之下 —— 設計稿與 spec.md §6 都是卡片在上"
+    fi
+}
+
 echo "架構檢查（docs/spec.md + CLAUDE.md）"
 echo "───────────────────────────────────────"
 check_viewmodel_uikit
@@ -125,6 +158,7 @@ check_data_layer_uikit
 check_mainactor_sync_tests
 check_no_storyboards
 check_no_swiftui
+check_header_order
 echo "───────────────────────────────────────"
 
 if [ "$failures" -gt 0 ]; then
