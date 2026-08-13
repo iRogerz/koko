@@ -358,6 +358,33 @@ friend1 的 004/005 同名不同 fid、friend3 的 2 筆 `status == 0`）。
 | 用 `withTintColor` 做 KO 選中態（會把整張壓成一團粉紅） | `test_tintColor_flattensEveryOpaqueColor_soItCannotBeUsedInstead` —— 直接把 tintColor 的行為釘成對照組，說明為何不能拿它取代 `replacingColor` | 測試 |
 | `replacingColor` 誤傷透明區或其他顏色 | `test_replacingColor_changesOnlyTheMatchingColor`、`test_replacingColor_keepsTransparentPixelsTransparent` | 測試 |
 
+### Step 6b：狀態 A 空狀態（2026-08-12，等使用者驗證）
+
+新增 `EmptyStateView`（插圖 → 主標 → 副標兩行 → 綠色漸層按鈕 →（靠底）設定 KOKO ID 連結），
+刪掉 Step 6a 的暫時文字。尺寸依 design-spec §7.9。決策：
+
+- **漸層是水平的，兩個停點就夠。** 實測 y 方向幾乎不變色（`#7CBF25`→`#7FBF26`），
+  x 方向從 `#58B30C` 走到 `#A1CB3E`。以 `#56B30B`→`#A6CC42` 兩點內插，
+  中點算出 `#7EBF26`，與實測 `#7DBF25` 吻合 —— design-spec 列的三個綠只有頭尾是停點，
+  `greenPrimary`(#79C41B) 其實是陰影色。
+- **圓角與陰影必須分兩層。** 漸層那層要 `masksToBounds` 才會被圓角裁掉，
+  但那會把陰影一起裁掉，所以陰影掛外層。以 `layerClass` 換 backing layer，
+  不必在 `layoutSubviews` 手動同步 frame。
+- **`icBtnAddFriends` 是單一平塗色 + 透明**，所以按鈕上的白色圖示可以直接 template 上色
+  （與 KO 素材不同，那張有三個平塗色才不能用 template）。
+- **連結靠底、上方留白可壓縮。** 設計稿畫布是 375×705，比 iPhone 8 的 667 高，
+  內容加起來會超出。按鈕與連結之間那段間距設為 `.defaultHigh`，矮機型上先被壓掉。
+- **量測值是「字的外框」不是 label 行框**，間距已扣掉行距餘量（21pt 約 5、13pt 約 3），
+  直接填量測值會比設計稿鬆。
+- **header 的粉紅小圓點是 10pt**（原本寫 6），且離 `>` 比離文字遠。
+
+### spec 修訂：聊天 badge 在狀態 A 不顯示
+
+New Comer 稿的「聊天」**沒有 badge**，與 spec §6.3「固定 99+」牴觸。
+判定：「固定 99+」的意思是「要顯示時寫死 99+」（本題無聊天 API），不是「永遠顯示」——
+一個好友都沒有的新用戶不會有 99+ 則聊天。已回寫 spec §6.3，
+`FriendListViewState.Content.isEmptyState` 提供判定，View 不自行推導。
+
 ## Open questions
 
 - ~~元件尺寸缺 Zeplin 數據~~ ✓ **已解除（2026-08-12）**。使用者提供三張設計稿 PNG

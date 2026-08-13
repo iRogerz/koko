@@ -7,7 +7,7 @@
 //  **依 view state 渲染，不自行推導畫面狀態**（CLAUDE.md architecture rule 3）。
 //  這個 VC 不知道「什麼情況算空狀態」「誰是邀請卡片」—— 那些都在 ViewModel。
 //
-//  Step 6a 範圍：狀態 B／C。狀態 A（空狀態）於 Step 6b 實作。
+//  三種狀態齊備：A 空狀態（`EmptyStateView`）／B 好友清單／C 含邀請卡片。
 //
 
 import Combine
@@ -92,17 +92,19 @@ final class FriendListViewController: UIViewController {
         return view
     }()
 
-    /// Step 6b 會換成完整的空狀態畫面（插圖 + 綠色漸層按鈕）。
-    private let temporaryEmptyLabel: UILabel = {
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.attributedText = AppText.body
-            .withColor(AppColor.textSecondary)
-            .attributedString("（空狀態畫面於 Step 6b 實作）", alignment: .center)
-        label.textAlignment = .center
-        label.isHidden = true
-        return label
+    /// 狀態 A（spec.md §6.6）。蓋在 tableView 之上、header 之下。
+    private let emptyStateView: EmptyStateView = {
+        let view = EmptyStateView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.isHidden = true
+        return view
     }()
+
+    /// 空狀態要從 header 底下開始，而 header 高度隨狀態變動，
+    /// 由 `sizeTableHeaderToFit()` 一併更新這條約束。
+    private lazy var emptyStateTop = emptyStateView.topAnchor.constraint(
+        equalTo: tableView.topAnchor
+    )
 
     // MARK: -
 
@@ -157,9 +159,9 @@ final class FriendListViewController: UIViewController {
     private func setUpLayout() {
         view.addSubview(topActionBarView)
         view.addSubview(tableView)
+        view.addSubview(emptyStateView)
         view.addSubview(blankPageView)
         view.addSubview(tabBarView)
-        view.addSubview(temporaryEmptyLabel)
         topActionBarView.translatesAutoresizingMaskIntoConstraints = false
         tabBarView.translatesAutoresizingMaskIntoConstraints = false
 
@@ -188,8 +190,10 @@ final class FriendListViewController: UIViewController {
             blankPageView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             blankPageView.bottomAnchor.constraint(equalTo: tabBarView.topAnchor),
 
-            temporaryEmptyLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            temporaryEmptyLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            emptyStateTop,
+            emptyStateView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            emptyStateView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            emptyStateView.bottomAnchor.constraint(equalTo: tabBarView.topAnchor),
         ])
     }
 
@@ -240,6 +244,7 @@ final class FriendListViewController: UIViewController {
         guard header.frame.height != height else { return }
         header.frame.size.height = height
         tableView.tableHeaderView = header
+        emptyStateTop.constant = height
     }
 
     // MARK: - Render
@@ -247,6 +252,7 @@ final class FriendListViewController: UIViewController {
     private func render(_ state: FriendListViewState) {
         profileHeaderView.configure(with: state.user)
         tabView.setInvitationCount(state.content.invitationBadgeCount)
+        tabView.setChatBadgeHidden(state.content.isEmptyState)
 
         // 另一個分頁：整頁蓋掉。資料不動，切回「朋友」即恢復。
         blankPageView.isHidden = !showsOtherTabPage
@@ -257,7 +263,7 @@ final class FriendListViewController: UIViewController {
             friends = []
             invitationSectionView.isHidden = true
             searchBarView.isHidden = true
-            temporaryEmptyLabel.isHidden = true
+            emptyStateView.isHidden = true
             tableView.reloadData()
             view.setNeedsLayout()
             return
@@ -268,26 +274,25 @@ final class FriendListViewController: UIViewController {
             friends = []
             invitationSectionView.isHidden = true
             searchBarView.isHidden = true
-            temporaryEmptyLabel.isHidden = true
+            emptyStateView.isHidden = true
 
         case .empty:
-            // Step 6b 換成完整的空狀態畫面。
             friends = []
             invitationSectionView.isHidden = true
             searchBarView.isHidden = true
-            temporaryEmptyLabel.isHidden = false
+            emptyStateView.isHidden = false
 
         case .loaded(let invites, let friends):
             self.friends = friends
             searchBarView.isHidden = false
-            temporaryEmptyLabel.isHidden = true
+            emptyStateView.isHidden = true
             invitationSectionView.configure(with: invites, isExpanded: isInvitationSectionExpanded)
 
         case .failed(let error):
             friends = []
             invitationSectionView.isHidden = true
             searchBarView.isHidden = true
-            temporaryEmptyLabel.isHidden = true
+            emptyStateView.isHidden = true
             presentFailure(error)
         }
 

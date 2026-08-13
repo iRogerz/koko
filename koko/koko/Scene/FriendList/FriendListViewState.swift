@@ -39,4 +39,11 @@ extension FriendListViewState.Content {
         guard case .loaded(let invites, _) = self else { return 0 }
         return invites.count
     }
+
+    /// 狀態 A。View 用它決定要不要顯示空狀態畫面、以及收起「聊天」badge（§6.3）。
+    /// 判定留在這裡，View 不自行推導（CLAUDE.md architecture rule 3）。
+    var isEmptyState: Bool {
+        if case .empty = self { return true }
+        return false
+    }
 }

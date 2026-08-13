@@ -32,12 +32,12 @@ cd koko && xcodebuild test -project koko.xcodeproj -scheme koko -destination 'pl
 | ViewModel（`FriendListViewModel` / 搜尋 / 狀態判定） | ✅ 完成，測試通過 |
 | DesignSystem（色票／字級／間距／素材 token） | ✅ 完成，測試通過 |
 | Scene — 情境選擇頁 | ✅ 完成 |
-| Scene — 好友列表頁（狀態 B／C） | ✅ 完成 |
-| Scene — 空狀態（狀態 A） | ⬜ 未開始 |
+| Scene — 好友列表頁（狀態 A／B／C） | ✅ 完成 |
 
 資料層到此全部完成，後續都是畫面。
 
-好友列表頁的狀態 B／C（有好友、含邀請）已完成；狀態 A 空狀態畫面尚未實作。
+好友列表頁三種狀態皆已完成，版面依設計稿實測值對齊（見 `docs/design-spec.md` §7）。
+剩餘為三項 UI 加分（下拉更新、搜尋框上推、邀請卡片展開收合動畫）。
 
 ## 架構
 

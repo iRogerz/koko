@@ -16,7 +16,8 @@ final class ProfileHeaderView: UIView {
     private enum Layout {
         static let avatarSize: CGFloat = 52
         static let chevronSize: CGFloat = 10
-        static let dotSize: CGFloat = 6
+        /// New Comer 稿量測值（design-spec §7.9 的 header 部分）。
+        static let dotSize: CGFloat = 10
         /// 大頭貼上下各留 16，header 總高 84。
         static let verticalPadding: CGFloat = 16
         /// 姓名與 KOKO ID 列的垂直間距。
@@ -69,6 +70,8 @@ final class ProfileHeaderView: UIView {
         kokoIDRow.axis = .horizontal
         kokoIDRow.alignment = .center
         kokoIDRow.spacing = Spacing.xs
+        // 設計稿上圓點離 `>` 比較開（123 →〔`>`〕→ 148）。
+        kokoIDRow.setCustomSpacing(Spacing.s, after: chevron)
 
         let textColumn = UIStackView(arrangedSubviews: [nameLabel, kokoIDRow])
         textColumn.translatesAutoresizingMaskIntoConstraints = false

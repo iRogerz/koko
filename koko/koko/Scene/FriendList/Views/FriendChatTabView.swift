@@ -122,6 +122,12 @@ final class FriendChatTabView: UIView {
         friendsBadge.setCount(count)
     }
 
+    /// 「聊天」badge 平常固定 `99+`（Zeplin 註解 #3），但 New Comer 稿上沒有它 ——
+    /// 一個好友都沒有的新用戶不會有 99+ 則聊天。空狀態時收起來（spec §6.3）。
+    func setChatBadgeHidden(_ isHidden: Bool) {
+        chatsBadge.isHidden = isHidden
+    }
+
     func select(_ segment: Segment) {
         guard segment != selectedSegment else { return }
         selectedSegment = segment
