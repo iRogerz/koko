@@ -61,10 +61,25 @@ final class InvitationSectionViewTests: XCTestCase {
         XCTAssertGreaterThan(expandedHeight, collapsedHeight)
     }
 
+    /// **第一張卡片在展開／收合時不得移動。** 它是使用者的視覺錨點，
+    /// 動起來就會看到「跳一下」。兩組約束對第一張的 leading／trailing／top
+    /// 本來就寫成一樣，這條保證之後不會有人不小心改掉其中一組。
+    func test_frontCard_doesNotMoveBetweenStates() async throws {
+        let invites = try makeInvites(count: 3)
+
+        let collapsed = laidOutSection(with: invites, isExpanded: false)
+        let expanded = laidOutSection(with: invites, isExpanded: true)
+
+        let collapsedFront = try XCTUnwrap(cards(in: collapsed).first).frame
+        let expandedFront = try XCTUnwrap(cards(in: expanded).first).frame
+
+        XCTAssertEqual(collapsedFront, expandedFront, "展開／收合時第一張卡片位移了，畫面上會看到它跳一下")
+    }
+
     /// 收合時第二張以後全部疊在同一個位置，只有第二張露得出來。
     func test_collapsed_stacksTrailingCardsAtTheSamePlace() async throws {
         let section = laidOutSection(with: try makeInvites(count: 3), isExpanded: false)
-        let cards = section.subviews.filter { $0 is InvitationCardView }
+        let cards = cards(in: section)
 
         XCTAssertEqual(cards.count, 3)
         XCTAssertEqual(cards[1].frame, cards[2].frame, "第三張沒有被第二張擋住")
@@ -87,8 +102,13 @@ final class InvitationSectionViewTests: XCTestCase {
         }
     }
 
+    /// 卡片依建立順序回傳（第一張＝最前面那張）。
+    private func cards(in section: InvitationSectionView) -> [InvitationCardView] {
+        section.subviews.compactMap { $0 as? InvitationCardView }
+    }
+
     private func cardIdentities(in section: InvitationSectionView) -> [ObjectIdentifier] {
-        section.subviews.compactMap { $0 as? InvitationCardView }.map(ObjectIdentifier.init)
+        cards(in: section).map(ObjectIdentifier.init)
     }
 
     private func laidOutSection(with invites: [Friend], isExpanded: Bool) -> InvitationSectionView {

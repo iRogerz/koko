@@ -298,29 +298,48 @@ final class FriendListViewController: UIViewController {
     /// AC-14：邀請卡片區展開／收合。卡片本身不會新增或移除（見 `InvitationSectionView`），
     /// 這裡只負責把 header 的新高度做成動畫。
     private func animateHeaderResize() {
-        headerStack.setNeedsLayout()
+        guard let header = tableView.tableHeaderView, let height = headerHeightThatFits() else {
+            return
+        }
 
         UIView.animate(withDuration: 0.25, delay: 0, options: .curveEaseInOut) {
-            self.headerStack.layoutIfNeeded()
-            self.sizeTableHeaderToFit()
+            // ⚠️ 順序不能反。header 是 tableHeaderView，走 frame-based 佈局；
+            // 先 layoutIfNeeded() 的話，UIStackView 會在「舊高度 + 新約束」下重新分配，
+            // 為了塞進不夠的高度去壓縮 arranged subview —— 第一張卡片會被擠得跳一下，
+            // 等下一行把 frame 改對才彈回去。**先定高度，再排版。**
+            self.applyHeaderHeight(height, to: header)
+            header.layoutIfNeeded()
         }
     }
 
     /// tableHeaderView 不吃 Auto Layout，必須自行算高度後指定 frame。
     private func sizeTableHeaderToFit() {
-        guard let header = tableView.tableHeaderView else { return }
+        guard let header = tableView.tableHeaderView, let height = headerHeightThatFits() else {
+            return
+        }
+        applyHeaderHeight(height, to: header)
+    }
+
+    /// 依目前的約束算出 header 該有的高度。寬度還沒定下來時回 `nil`。
+    private func headerHeightThatFits() -> CGFloat? {
+        guard let header = tableView.tableHeaderView else { return nil }
 
         let targetWidth = tableView.bounds.width
-        guard targetWidth > 0 else { return }
+        guard targetWidth > 0 else { return nil }
 
         header.frame.size.width = targetWidth
-        let height = header.systemLayoutSizeFitting(
+        return header.systemLayoutSizeFitting(
             CGSize(width: targetWidth, height: UIView.layoutFittingCompressedSize.height),
             withHorizontalFittingPriority: .required,
             verticalFittingPriority: .fittingSizeLevel
         ).height
+    }
 
+    /// 高度沒變就不要重指定 `tableHeaderView` —— 那會讓 table 整個重排，
+    /// 在 `viewDidLayoutSubviews` 裡會無限循環。
+    private func applyHeaderHeight(_ height: CGFloat, to header: UIView) {
         guard header.frame.height != height else { return }
+
         header.frame.size.height = height
         tableView.tableHeaderView = header
         emptyStateTop.constant = height

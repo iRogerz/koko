@@ -357,6 +357,7 @@ friend1 的 004/005 同名不同 fid、friend3 的 2 筆 `status == 0`）。
 | **邀請卡片改回「收合時只建兩張」**（動畫會變成卡片憑空跳出來，但畫面不報錯） | `test_togglingExpansion_reusesTheSameCardViews` —— 比對展開／收合前後的 view 實例身分 | 測試 |
 | 名單變了卻沿用舊卡片（接受邀請後畫面不更新） | `test_changingInvites_rebuildsCards` | 測試 |
 | 取消搜尋時漏掉清關鍵字或漏通知還原 | `test_cancelSearch_clearsKeywordAndNotifies` | 測試 |
+| **展開／收合時第一張卡片位移**（畫面上看到它跳一下） | `test_frontCard_doesNotMoveBetweenStates` —— 比對兩種狀態下第一張的 frame。與動畫實作無關，釘的是約束層面的不變量 | 測試 |
 | 照 Zeplin 檔名猜素材尺寸（KO 圓只佔素材寬 57.6%） | `AppTabBarView.Layout` 記下比例推導；`test_centerKOButton_isNotTemplateRendered` | 註解＋測試 |
 | 用 `withTintColor` 做 KO 選中態（會把整張壓成一團粉紅） | `test_tintColor_flattensEveryOpaqueColor_soItCannotBeUsedInstead` —— 直接把 tintColor 的行為釘成對照組，說明為何不能拿它取代 `replacingColor` | 測試 |
 | `replacingColor` 誤傷透明區或其他顏色 | `test_replacingColor_changesOnlyTheMatchingColor`、`test_replacingColor_keepsTransparentPixelsTransparent` | 測試 |
@@ -402,6 +403,15 @@ New Comer 稿的「聊天」**沒有 badge**，與 spec §6.3「固定 99+」牴
   兩張、展開再補建，這樣做動畫會看到卡片憑空跳出來。改成一次建齊，收合時把
   第二張之後**全部疊在同一個位置**（只有第二張露得出來，其餘被它擋住），
   切換就只是 `deactivate` / `activate` 兩組約束，`layoutIfNeeded()` 直接補間。
+- **展開時第一張卡片會跳一下（2026-08-12 使用者回報，已修）。** 原因是動畫區塊裡
+  `layoutIfNeeded()` 排在 `sizeTableHeaderToFit()` 前面 —— header 是 tableHeaderView，
+  走 frame-based 佈局，先排版等於用「舊高度 + 新約束」跑一次，`UIStackView` 的 `.fill`
+  為了塞進不夠的高度會去壓縮 arranged subview，第一張卡片被擠了一下，
+  等下一行把 frame 改對才彈回去。收合時空間變多所以不明顯，展開時最明顯。
+  **修法：先定高度，再排版。**
+- **不考慮 Lottie。** 憲法禁止第三方套件；而且這裡動的是有按鈕、內容隨資料變動的
+  真實 view，Lottie 播的是預算好的向量動畫，換過去按鈕就不能點了。
+  卡頓也不是繪製效能問題，是佈局順序 bug，換 Lottie 只是把它藏起來。
 - **AC-13 的內容不夠長時捲不到定位。** 補底部 `contentInset` 讓 offset 捲得到；
   搜尋會讓清單變短，所以每次 `render()` 都重算。額外的 inset 要等捲回頂端**之後**
   才收（`scrollViewDidEndScrollingAnimation`），在途中收會讓內容跳一下。
