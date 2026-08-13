@@ -7,10 +7,7 @@
 
 ## 操作錄影
 
-> **▶︎ 錄影連結：** `（待補）`
->
-> <!-- 錄影完成後把上面那行換成連結，例如：
->      **▶︎ [操作錄影（約 3 分鐘）](https://youtu.be/xxxxxxxx)** -->
+**▶︎ [操作錄影](https://www.youtube.com/watch?v=zTt3rn-VRKU)**
 
 涵蓋三種情境與四項加分功能。錄影的操作順序與各段重點見
 [`docs/recording-script.md`](docs/recording-script.md)。
@@ -158,4 +155,4 @@ cd koko && xcodebuild test -project koko.xcodeproj -scheme koko -destination 'pl
 ## 交付
 
 - [x] 程式碼（AC-16）
-- [ ] 錄影檔（AC-17）—— 連結補在本檔最上方的「操作錄影」
+- [x] 錄影檔（AC-17）—— 連結見本檔最上方的「操作錄影」
