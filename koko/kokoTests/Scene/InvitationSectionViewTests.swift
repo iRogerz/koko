@@ -70,8 +70,8 @@ final class InvitationSectionViewTests: XCTestCase {
         let collapsed = laidOutSection(with: invites, isExpanded: false)
         let expanded = laidOutSection(with: invites, isExpanded: true)
 
-        let collapsedFront = try XCTUnwrap(cards(in: collapsed).first).frame
-        let expandedFront = try XCTUnwrap(cards(in: expanded).first).frame
+        let collapsedFront = try XCTUnwrap(frontCard(in: collapsed)).frame
+        let expandedFront = try XCTUnwrap(frontCard(in: expanded)).frame
 
         XCTAssertEqual(collapsedFront, expandedFront, "展開／收合時第一張卡片位移了，畫面上會看到它跳一下")
     }
@@ -79,11 +79,13 @@ final class InvitationSectionViewTests: XCTestCase {
     /// 收合時第二張以後全部疊在同一個位置，只有第二張露得出來。
     func test_collapsed_stacksTrailingCardsAtTheSamePlace() async throws {
         let section = laidOutSection(with: try makeInvites(count: 3), isExpanded: false)
-        let cards = cards(in: section)
+        let front = try XCTUnwrap(frontCard(in: section))
+        let stacked = cards(in: section).filter { $0 !== front }
 
-        XCTAssertEqual(cards.count, 3)
-        XCTAssertEqual(cards[1].frame, cards[2].frame, "第三張沒有被第二張擋住")
-        XCTAssertNotEqual(cards[0].frame, cards[1].frame, "第二張沒有露出底邊")
+        XCTAssertEqual(stacked.count, 2)
+        XCTAssertEqual(stacked[0].frame, stacked[1].frame, "後面兩張沒有疊在同一個位置")
+        XCTAssertNotEqual(front.frame, stacked[0].frame, "後面的卡片沒有露出底邊")
+        XCTAssertLessThan(front.frame.minY, stacked[0].frame.minY, "露出的應該是底邊，後面的卡片要更低")
     }
 
     /// 無邀請時整區收起來，不佔高度。
@@ -102,13 +104,21 @@ final class InvitationSectionViewTests: XCTestCase {
         }
     }
 
-    /// 卡片依建立順序回傳（第一張＝最前面那張）。
+    /// ⚠️ `subviews` 是 **z-order**，不是建立順序。實作刻意把第一張
+    /// `bringSubviewToFront`，所以這個陣列的順序正好是**反的**。
+    /// 要談「第幾張」一律用位置判斷，不要靠索引。
     private func cards(in section: InvitationSectionView) -> [InvitationCardView] {
         section.subviews.compactMap { $0 as? InvitationCardView }
     }
 
-    private func cardIdentities(in section: InvitationSectionView) -> [ObjectIdentifier] {
-        cards(in: section).map(ObjectIdentifier.init)
+    /// 最上面那張（y 最小）。收合時是唯一完整露出來的那張。
+    private func frontCard(in section: InvitationSectionView) -> InvitationCardView? {
+        cards(in: section).min { $0.frame.minY < $1.frame.minY }
+    }
+
+    /// 只比對「是不是同一批實例」，與順序無關。
+    private func cardIdentities(in section: InvitationSectionView) -> Set<ObjectIdentifier> {
+        Set(cards(in: section).map(ObjectIdentifier.init))
     }
 
     private func laidOutSection(with invites: [Friend], isExpanded: Bool) -> InvitationSectionView {

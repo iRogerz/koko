@@ -38,7 +38,10 @@ final class InvitationSectionView: UIView {
     /// 接受或拒絕某張邀請。
     var onRespond: ((String) -> Void)?
 
-    private var invites: [Friend] = []
+    /// `nil` 代表**一次都還沒建過**。用 optional 而非空陣列，是為了讓第一次
+    /// `configure(with: [], …)` 也會走進重建 —— 否則「空陣列 vs 空陣列」比對相等，
+    /// 整區不會被收起來。
+    private var builtInvites: [Friend]?
     private var cards: [InvitationCardView] = []
 
     private var expandedConstraints: [NSLayoutConstraint] = []
@@ -60,9 +63,9 @@ final class InvitationSectionView: UIView {
 
     func configure(with invites: [Friend], isExpanded: Bool) {
         // 名單沒變就不要重建 —— 重建會讓進行中的展開動畫斷掉。
-        if self.invites.map(\.fid) != invites.map(\.fid) {
-            self.invites = invites
-            rebuildCards()
+        if builtInvites?.map(\.fid) != invites.map(\.fid) {
+            builtInvites = invites
+            rebuildCards(with: invites)
         }
         self.isExpanded = isExpanded
         applyExpansion()
@@ -70,7 +73,7 @@ final class InvitationSectionView: UIView {
 
     // MARK: - 建卡片
 
-    private func rebuildCards() {
+    private func rebuildCards(with invites: [Friend]) {
         // 移除 subview 會連帶移除參照到它的 constraint，不需要另外 deactivate。
         cards.forEach { $0.removeFromSuperview() }
         cards = []

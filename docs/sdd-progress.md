@@ -358,6 +358,8 @@ friend1 的 004/005 同名不同 fid、friend3 的 2 筆 `status == 0`）。
 | 名單變了卻沿用舊卡片（接受邀請後畫面不更新） | `test_changingInvites_rebuildsCards` | 測試 |
 | 取消搜尋時漏掉清關鍵字或漏通知還原 | `test_cancelSearch_clearsKeywordAndNotifies` | 測試 |
 | **展開／收合時第一張卡片位移**（畫面上看到它跳一下） | `test_frontCard_doesNotMoveBetweenStates` —— 比對兩種狀態下第一張的 frame。與動畫實作無關，釘的是約束層面的不變量 | 測試 |
+| **無邀請時整區沒收起來**（第一次 configure 傳空陣列，「空 vs 空」比對相等而跳過重建） | `test_noInvites_hidesSection`；實作改用 optional `builtInvites`，`nil != []` 保證第一次一定重建 | 測試＋型別設計 |
+| 測試靠 `subviews` 索引指認「第幾張卡片」（`subviews` 是 z-order，而第一張被 `bringSubviewToFront` 帶到最上層，順序正好是反的） | 助手改為依位置指認（`frontCard` 取 y 最小者），身分比對改用 `Set` | 測試寫法 |
 | 照 Zeplin 檔名猜素材尺寸（KO 圓只佔素材寬 57.6%） | `AppTabBarView.Layout` 記下比例推導；`test_centerKOButton_isNotTemplateRendered` | 註解＋測試 |
 | 用 `withTintColor` 做 KO 選中態（會把整張壓成一團粉紅） | `test_tintColor_flattensEveryOpaqueColor_soItCannotBeUsedInstead` —— 直接把 tintColor 的行為釘成對照組，說明為何不能拿它取代 `replacingColor` | 測試 |
 | `replacingColor` 誤傷透明區或其他顏色 | `test_replacingColor_changesOnlyTheMatchingColor`、`test_replacingColor_keepsTransparentPixelsTransparent` | 測試 |
