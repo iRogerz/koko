@@ -5,6 +5,16 @@
 以 **Swift + UIKit（純程式碼）+ MVVM + Swift Concurrency** 實作 KOKO 好友列表頁，
 依三種資料情境自動切換三種畫面狀態，並支援姓名關鍵字搜尋。
 
+## 操作錄影
+
+> **▶︎ 錄影連結：** `（待補）`
+>
+> <!-- 錄影完成後把上面那行換成連結，例如：
+>      **▶︎ [操作錄影（約 3 分鐘）](https://youtu.be/xxxxxxxx)** -->
+
+涵蓋三種情境與四項加分功能。錄影的操作順序與各段重點見
+[`docs/recording-script.md`](docs/recording-script.md)。
+
 ## 執行
 
 ```bash
@@ -15,29 +25,30 @@ open koko/koko.xcodeproj
 - 最低支援 iOS 15.0
 - **無第三方套件**，不需要 `pod install` 或任何額外步驟
 
-跑測試：
+跑測試（`⌘U`，或）：
 
 ```bash
-cd koko && xcodebuild test -project koko.xcodeproj -scheme koko -destination 'platform=iOS Simulator,name=iPhone 16'
+cd koko && xcodebuild test -project koko.xcodeproj -scheme koko -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 
-## 目前進度
+## 完成度
 
-| 層 | 狀態 |
+| 項目 | 狀態 |
 |---|---|
-| Model（`User` / `Friend` / `FriendStatus` / `UpdateDate`） | ✅ 完成，測試通過 |
-| 合併去重與排序（`FriendMerger` / `FriendSorter`） | ✅ 完成，測試通過 |
-| Network（`HTTPClient` / `Endpoint` / `APIClient`） | ✅ 完成，測試通過 |
-| Repository（`FriendRepository`，三種情境並行載入） | ✅ 完成，測試通過 |
-| ViewModel（`FriendListViewModel` / 搜尋 / 狀態判定） | ✅ 完成，測試通過 |
-| DesignSystem（色票／字級／間距／素材 token） | ✅ 完成，測試通過 |
-| Scene — 情境選擇頁 | ✅ 完成 |
-| Scene — 好友列表頁（狀態 A／B／C） | ✅ 完成 |
+| Model（`User` / `Friend` / `FriendStatus` / `UpdateDate`） | ✅ |
+| 合併去重與排序（`FriendMerger` / `FriendSorter`） | ✅ |
+| Network（`HTTPClient` / `Endpoint` / `APIClient`） | ✅ |
+| Repository（`FriendRepository`，多來源並行載入） | ✅ |
+| ViewModel（`FriendListViewModel` / 搜尋 / 狀態判定） | ✅ |
+| DesignSystem（色票／字級／間距／素材 token） | ✅ |
+| Scene — 情境選擇頁 | ✅ |
+| Scene — 好友列表頁（狀態 A／B／C） | ✅ |
+| 加分 1 — 下拉更新 | ✅ |
+| 加分 2 — 搜尋框上推 | ✅ |
+| 加分 3 — 邀請卡片展開／收合動畫 | ✅ |
+| 加分 4 — Unit Test | ✅ 182 個測試 |
 
-資料層到此全部完成，後續都是畫面。
-
-好友列表頁三種狀態皆已完成，版面依設計稿實測值對齊（見 `docs/design-spec.md` §7）。
-剩餘為三項 UI 加分（下拉更新、搜尋框上推、邀請卡片展開收合動畫）。
+版面依設計稿**實測值**對齊，逐項尺寸記在 [`docs/design-spec.md`](docs/design-spec.md) §7。
 
 ## 架構
 
@@ -63,13 +74,17 @@ cd koko && xcodebuild test -project koko.xcodeproj -scheme koko -destination 'pl
 3. **ViewModel 對外只暴露單一 view state**，View 依 state 渲染，不自行推導畫面狀態。
 
 ```
-urgent/
+.
 ├── docs/
-│   ├── spec.md          # Feature Spec — 唯一真實來源
-│   ├── design-spec.md   # Zeplin 色票／字級／版面
-│   └── sdd-progress.md  # 開發歷程與決策紀錄
-├── CLAUDE.md            # 專案規範
-└── koko/                # Xcode 專案
+│   ├── spec.md              # Feature Spec — 唯一真實來源
+│   ├── design-spec.md       # Zeplin 色票／字級／元件尺寸
+│   ├── sdd-progress.md      # 開發歷程與決策紀錄
+│   ├── recording-script.md  # 錄影腳本
+│   └── design/              # 設計稿 PNG（尺寸量測來源）
+├── scripts/
+│   └── check-architecture.sh
+├── CLAUDE.md                # 專案規範
+└── koko/                    # Xcode 專案
 ```
 
 ## 三個關鍵技術決策
@@ -129,16 +144,18 @@ urgent/
 | 有人把邀請卡片改回 `status == 2` | 三個測試從不同角度釘住 `status == 0` |
 | 有人改用 `name` 去重 | 把「同名不同 fid」這個前提寫成測試 |
 | 並行請求退化成循序 | 量測同時在途的請求數，循序會掉到 1 |
+| 好友 cell 因為星星而左右錯位 | 斷言有／無星星兩種列的頭像 `minX` 相同 |
+| 展開動畫改回「用到才建卡片」（動畫會爛掉但畫面不報錯） | 比對展開／收合前後的 view 實例身分 |
 
 另有 `scripts/check-architecture.sh` —— 不需編譯的架構檢查，涵蓋
-「ViewModel 不得 import UIKit」「不得殘留 Storyboard／SwiftUI」等規則：
+「ViewModel 不得 import UIKit」「不得殘留 Storyboard／SwiftUI」
+「邀請卡片區必須排在 tab 列之上」等規則：
 
 ```bash
 ./scripts/check-architecture.sh
 ```
 
-## 待補
+## 交付
 
-- [ ] 好友列表頁 UI（header／tab／搜尋框／邀請卡片／好友 cell／空狀態／TabBar）
-- [ ] 加分項目：下拉更新、搜尋框上推、邀請卡片展開收合（Unit Test 已完成）
-- [ ] 錄影檔（涵蓋三種情境與四項加分功能）
+- [x] 程式碼（AC-16）
+- [ ] 錄影檔（AC-17）—— 連結補在本檔最上方的「操作錄影」
