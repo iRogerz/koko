@@ -33,8 +33,24 @@ final class FriendSearchBarView: UIView {
     /// 關鍵字變動時呼叫。
     var onKeywordChange: ((String) -> Void)?
 
-    /// 使用者點進搜尋框（AC-13 的觸發點，動畫在 Step 7）。
+    /// 使用者點進搜尋框 —— AC-13「畫面上推」的觸發點。
     var onBeginEditing: (() -> Void)?
+
+    /// 使用者按「取消」—— AC-13「還原」的觸發點。關鍵字一併清空。
+    var onCancel: (() -> Void)?
+
+    /// 設計稿沒有搜尋聚焦後的畫面，「取消」是為了讓 AC-13 的「取消時還原」
+    /// 有明確的觸發點（否則只能靠點空白處收鍵盤，錄影時看不出來）。
+    private let cancelButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.setAttributedTitle(
+            AppText.tabTitle.withColor(AppColor.kokoPink).attributedString("取消"),
+            for: .normal
+        )
+        button.isHidden = true
+        return button
+    }()
 
     private let field: UITextField = {
         let field = UITextField()
@@ -84,13 +100,19 @@ final class FriendSearchBarView: UIView {
 
         addSubview(container)
         addSubview(addFriendButton)
+        addSubview(cancelButton)
         container.addSubview(magnifier)
         container.addSubview(field)
 
         field.addTarget(self, action: #selector(editingChanged), for: .editingChanged)
         field.addTarget(self, action: #selector(editingBegan), for: .editingDidBegin)
+        cancelButton.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
 
         NSLayoutConstraint.activate([
+            // 「取消」蓋在加好友按鈕的位置上，兩者互斥顯示，搜尋框寬度不變。
+            cancelButton.centerYAnchor.constraint(equalTo: addFriendButton.centerYAnchor),
+            cancelButton.trailingAnchor.constraint(equalTo: layoutMarginsGuide.trailingAnchor),
+
             container.leadingAnchor.constraint(equalTo: layoutMarginsGuide.leadingAnchor),
             container.topAnchor.constraint(equalTo: topAnchor, constant: Layout.topPadding),
             container.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -Layout.bottomPadding),
@@ -121,8 +143,21 @@ final class FriendSearchBarView: UIView {
         fatalError("純程式碼建立，不支援 Storyboard／XIB")
     }
 
+    /// 搜尋聚焦中（畫面已上推）。
+    private(set) var isSearching = false
+
     func resignSearchFocus() {
         field.resignFirstResponder()
+        setSearching(false)
+    }
+
+    /// 取消搜尋：清空關鍵字、收鍵盤、通知外部還原畫面。
+    /// 「取消」按鈕與外部呼叫共用這一條路徑，行為不會分岔。
+    func cancelSearch() {
+        field.text = ""
+        onKeywordChange?("")
+        resignSearchFocus()
+        onCancel?()
     }
 
     @objc private func editingChanged() {
@@ -130,6 +165,18 @@ final class FriendSearchBarView: UIView {
     }
 
     @objc private func editingBegan() {
+        setSearching(true)
         onBeginEditing?()
+    }
+
+    @objc private func cancelTapped() {
+        cancelSearch()
+    }
+
+    /// 加好友與取消互斥。兩者都靠右對齊，切換不會動到搜尋框寬度。
+    private func setSearching(_ isSearching: Bool) {
+        self.isSearching = isSearching
+        cancelButton.isHidden = !isSearching
+        addFriendButton.isHidden = isSearching
     }
 }

@@ -27,6 +27,9 @@ final class FriendListViewController: UIViewController {
     private var friends: [Friend] = []
     private var isInvitationSectionExpanded = false
 
+    /// AC-13：搜尋中，畫面已上推到搜尋框置頂。
+    private var isSearchPushedUp = false
+
     /// 底部 TabBar 切到「朋友」以外 —— 那是**另一個分頁**，整頁（含 header 與
     /// 好友／聊天 segment）都換成空白（spec.md §11）。
     private var showsOtherTabPage: Bool {
@@ -58,6 +61,13 @@ final class FriendListViewController: UIViewController {
         return view
     }()
 
+    /// AC-12 下拉更新。
+    private let refreshControl: UIRefreshControl = {
+        let control = UIRefreshControl()
+        control.tintColor = AppColor.kokoPink
+        return control
+    }()
+
     private lazy var tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .plain)
         tableView.translatesAutoresizingMaskIntoConstraints = false
@@ -67,6 +77,7 @@ final class FriendListViewController: UIViewController {
         tableView.delegate = self
         tableView.rowHeight = Layout.rowHeight
         tableView.keyboardDismissMode = .onDrag
+        tableView.refreshControl = refreshControl
         tableView.register(FriendCell.self, forCellReuseIdentifier: FriendCell.reuseIdentifier)
         return tableView
     }()
@@ -198,8 +209,18 @@ final class FriendListViewController: UIViewController {
     }
 
     private func bindViews() {
+        refreshControl.addTarget(self, action: #selector(handleRefresh), for: .valueChanged)
+
         searchBarView.onKeywordChange = { [weak self] keyword in
             self?.viewModel.search(keyword)
+        }
+
+        searchBarView.onBeginEditing = { [weak self] in
+            self?.pushUpToSearchBar()
+        }
+
+        searchBarView.onCancel = { [weak self] in
+            self?.restoreFromSearch()
         }
 
         invitationSectionView.onToggle = { [weak self] in
@@ -207,6 +228,7 @@ final class FriendListViewController: UIViewController {
             self.isInvitationSectionExpanded.toggle()
             // 重新以目前 state 渲染，讓收合狀態一併套用。
             self.render(self.viewModel.state)
+            self.animateHeaderResize()
         }
 
         invitationSectionView.onRespond = { [weak self] fid in
@@ -215,15 +237,72 @@ final class FriendListViewController: UIViewController {
 
         // 「朋友」以外的分頁只呈現空白，不影響已載入的資料。
         tabBarView.onSelect = { [weak self] _ in
-            guard let self else { return }
-            self.searchBarView.resignSearchFocus()
-            self.render(self.viewModel.state)
+            self?.leaveSearch()
         }
 
         tabView.onSelect = { [weak self] _ in
-            guard let self else { return }
-            self.searchBarView.resignSearchFocus()
-            self.render(self.viewModel.state)
+            self?.leaveSearch()
+        }
+    }
+
+    // MARK: - 加分項目
+
+    /// AC-12：下拉更新。`refresh()` 刻意不切回 `.loading`（不閃骨架），
+    /// 所以要自己在載入結束時停掉轉圈。
+    @objc private func handleRefresh() {
+        Task {
+            await viewModel.refresh()
+            refreshControl.endRefreshing()
+        }
+    }
+
+    /// AC-13：點搜尋框時把畫面上推，讓搜尋框貼到頂部功能列下方。
+    ///
+    /// 搜尋框在 tableHeaderView 裡，所以「上推」就是把 content offset 捲到
+    /// 搜尋框在 header 內的 y。內容不夠長時捲不到那麼遠，先補底部 inset。
+    ///
+    /// （AC-13 原文寫「置頂至 navigationBar 下方」，但設計稿沒有 navigation bar，
+    /// 現在頂部是 `TopActionBarView`，語意相同。）
+    private func pushUpToSearchBar() {
+        isSearchPushedUp = true
+        updateSearchInset()
+        tableView.setContentOffset(CGPoint(x: 0, y: searchBarTopOffset), animated: true)
+    }
+
+    private func restoreFromSearch() {
+        isSearchPushedUp = false
+        tableView.setContentOffset(.zero, animated: true)
+    }
+
+    /// 切分頁／切 segment 時一併離開搜尋狀態，否則畫面會停在上推的位置。
+    private func leaveSearch() {
+        searchBarView.resignSearchFocus()
+        restoreFromSearch()
+        render(viewModel.state)
+    }
+
+    private var searchBarTopOffset: CGFloat {
+        searchBarView.frame.minY
+    }
+
+    /// 補足底部 inset，讓 content offset 捲得到 `searchBarTopOffset`。
+    /// 搜尋會讓清單變短，所以每次 render 都要重算。
+    private func updateSearchInset() {
+        guard isSearchPushedUp else { return }
+
+        tableView.layoutIfNeeded()
+        let overflow = searchBarTopOffset + tableView.bounds.height - tableView.contentSize.height
+        tableView.contentInset.bottom = max(0, overflow)
+    }
+
+    /// AC-14：邀請卡片區展開／收合。卡片本身不會新增或移除（見 `InvitationSectionView`），
+    /// 這裡只負責把 header 的新高度做成動畫。
+    private func animateHeaderResize() {
+        headerStack.setNeedsLayout()
+
+        UIView.animate(withDuration: 0.25, delay: 0, options: .curveEaseInOut) {
+            self.headerStack.layoutIfNeeded()
+            self.sizeTableHeaderToFit()
         }
     }
 
@@ -298,6 +377,8 @@ final class FriendListViewController: UIViewController {
 
         tableView.reloadData()
         view.setNeedsLayout()
+        // 搜尋會讓清單變短，上推需要的底部 inset 跟著變。
+        updateSearchInset()
     }
 
     /// spec §10 O-4：顯示錯誤提示 + 重試，不自動重試。
@@ -341,6 +422,13 @@ extension FriendListViewController: UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
+    }
+
+    /// 上推用的額外 inset 要等捲回頂端**之後**才收，
+    /// 在捲動途中收會讓內容跳一下。
+    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+        guard !isSearchPushedUp else { return }
+        tableView.contentInset.bottom = 0
     }
 }
 

@@ -297,9 +297,10 @@ struct FriendListViewState {
 
 ### 加分項目（四項全做）
 
-- [ ] AC-12　好友列表支援下拉更新，重新呼叫該情境的 API
-- [ ] AC-13　點擊搜尋框時，畫面上推使搜尋框置頂至 navigationBar 下方；取消時還原
-- [ ] AC-14　邀請卡片區支援展開／收合動畫
+- [x] AC-12　好友列表支援下拉更新，重新呼叫該情境的 API
+- [x] AC-13　點擊搜尋框時，畫面上推使搜尋框置頂至 navigationBar 下方；取消時還原
+      —— 設計稿沒有 navigation bar，改為置頂至 `TopActionBarView` 下方，語意相同
+- [x] AC-14　邀請卡片區支援展開／收合動畫
 - [ ] AC-15　Unit Test 覆蓋：合併去重、日期正規化、搜尋篩選、狀態判定、Decodable 型別
 
 ### 交付

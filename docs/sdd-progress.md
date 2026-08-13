@@ -354,6 +354,9 @@ friend1 的 004/005 同名不同 fid、friend3 的 2 筆 `status == 0`）。
 | **邀請卡片區被排到 tab 列之下**（畫面不會壞，只是位置錯） | `scripts/check-architecture.sh` 規則 6 —— 比對 `headerStack` 陣列裡兩者的先後；已用假違規驗證會回 exit 1 | lint 腳本 |
 | **星星把頭像推開，有／無星星的列對不齊** | `test_avatarPosition_isUnaffectedByStar` —— 直接斷言兩種列的頭像 `minX` 相同且為 50 | 測試 |
 | cell 列高被內容撐開 | `test_rowHeight_is60` | 測試 |
+| **邀請卡片改回「收合時只建兩張」**（動畫會變成卡片憑空跳出來，但畫面不報錯） | `test_togglingExpansion_reusesTheSameCardViews` —— 比對展開／收合前後的 view 實例身分 | 測試 |
+| 名單變了卻沿用舊卡片（接受邀請後畫面不更新） | `test_changingInvites_rebuildsCards` | 測試 |
+| 取消搜尋時漏掉清關鍵字或漏通知還原 | `test_cancelSearch_clearsKeywordAndNotifies` | 測試 |
 | 照 Zeplin 檔名猜素材尺寸（KO 圓只佔素材寬 57.6%） | `AppTabBarView.Layout` 記下比例推導；`test_centerKOButton_isNotTemplateRendered` | 註解＋測試 |
 | 用 `withTintColor` 做 KO 選中態（會把整張壓成一團粉紅） | `test_tintColor_flattensEveryOpaqueColor_soItCannotBeUsedInstead` —— 直接把 tintColor 的行為釘成對照組，說明為何不能拿它取代 `replacingColor` | 測試 |
 | `replacingColor` 誤傷透明區或其他顏色 | `test_replacingColor_changesOnlyTheMatchingColor`、`test_replacingColor_keepsTransparentPixelsTransparent` | 測試 |
@@ -384,6 +387,29 @@ New Comer 稿的「聊天」**沒有 badge**，與 spec §6.3「固定 99+」牴
 判定：「固定 99+」的意思是「要顯示時寫死 99+」（本題無聊天 API），不是「永遠顯示」——
 一個好友都沒有的新用戶不會有 99+ 則聊天。已回寫 spec §6.3，
 `FriendListViewState.Content.isEmptyState` 提供判定，View 不自行推導。
+
+### Step 7：三項 UI 加分（2026-08-12，等使用者驗證）
+
+| AC | 內容 | 實作 |
+|---|---|---|
+| AC-12 | 下拉更新 | `UIRefreshControl` → `viewModel.refresh()`。`refresh()` 刻意不切回 `.loading`（不閃骨架），所以要自己在載入結束時 `endRefreshing()` |
+| AC-13 | 搜尋框上推 | 搜尋框在 tableHeaderView 裡，「上推」＝把 content offset 捲到搜尋框在 header 內的 y |
+| AC-14 | 邀請卡片展開／收合動畫 | 卡片一次全部建好，收合只換一組約束 |
+
+決策：
+
+- **AC-14 的關鍵不是動畫本身，是「切換時不新增也不移除卡片」。** 原本收合只建
+  兩張、展開再補建，這樣做動畫會看到卡片憑空跳出來。改成一次建齊，收合時把
+  第二張之後**全部疊在同一個位置**（只有第二張露得出來，其餘被它擋住），
+  切換就只是 `deactivate` / `activate` 兩組約束，`layoutIfNeeded()` 直接補間。
+- **AC-13 的內容不夠長時捲不到定位。** 補底部 `contentInset` 讓 offset 捲得到；
+  搜尋會讓清單變短，所以每次 `render()` 都重算。額外的 inset 要等捲回頂端**之後**
+  才收（`scrollViewDidEndScrollingAnimation`），在途中收會讓內容跳一下。
+- **AC-13 原文寫「置頂至 navigationBar 下方」**，但設計稿沒有 navigation bar，
+  現在頂部是 `TopActionBarView`，語意相同。已在 spec 註記。
+- **「取消」按鈕是自己加的。** 設計稿沒有搜尋聚焦後的畫面，加它是為了讓
+  AC-13 的「取消時還原」有明確觸發點（否則只能點空白處收鍵盤，錄影時看不出來）。
+  它與外部呼叫共用 `cancelSearch()`，行為不會分岔。
 
 ## Open questions
 
