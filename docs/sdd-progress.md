@@ -326,7 +326,7 @@ friend1 的 004/005 同名不同 fid、friend3 的 2 筆 `status == 0`）。
 1. 三次執行、三個不同 process，**位址完全相同** → 確定性錯誤，排除 data race。
 2. 位址固定且低，符合「常數／immortal 物件被 free」的特徵。
 3. 從 `.xcresult` 讀出 **23 個測試 22 個通過**，只有這一個 crash
-   （`xcrun xcresulttool get test-results summary --path <xcresult>`）——
+   （指令見本檔最後的 Notes；`xcrun` 前綴在本機無效）——
    這一步最關鍵，推翻了先前「`User.stub` static let 有問題」的錯誤假設。
 4. 該測試是全類別**唯一的同步方法**，其餘 22 個都是 `async`。
 
@@ -468,6 +468,19 @@ New Comer 稿的「聊天」**沒有 badge**，與 spec §6.3「固定 99+」牴
 - 使用者自己跑 build／test／模擬器，agent 不要代跑；agent 只跑 lint 這類不需編譯的檢查。
 - 測試一律用 `koko/kokoTests/Fixtures/` 的離線 JSON，不打真實網路。
 - **`@MainActor` 測試類別內的 test 方法一律寫成 `async`**，同步方法會 SIGABRT，見 Hashimoto log。
-- 讀測試結果用 `xcrun xcresulttool get test-results summary --path <xcresult>`，
-  比從 console 訊息猜快得多。
+- 讀測試結果用 `xcresulttool`，比從 console 訊息或 Xcode 的圖示猜快得多：
+
+  ```
+  XR=/Applications/Xcode-26.6.0.app/Contents/Developer/usr/bin/xcresulttool
+  R=$(ls -dt ~/Library/Developer/Xcode/DerivedData/koko-*/Logs/Test/*.xcresult | head -1)
+  "$XR" get test-results summary --path "$R"      # 總覽：failedTests / result
+  "$XR" get test-results tests   --path "$R"      # 逐項：每個節點的 result
+  ```
+
+  ⚠️ **不能用 `xcrun xcresulttool`。** 本機 `xcode-select -p` 指向
+  `/Library/Developer/CommandLineTools`（不是 Xcode.app），`xcrun` 找不到這支工具，
+  會回「unable to find utility」。必須給完整路徑，或先 `sudo xcode-select -s`。
+- **Xcode 測試導覽器的圖示不是判斷依據。** 2026-08-13 出現過「`kokoTests` 那列是紅的、
+  但 `.xcresult` 裡逐層掃過去每個節點都是 Passed（0 failed / 0 skipped）」的情況。
+  要判斷過沒過，讀 `.xcresult`。
 - 交付物包含**錄影檔**，需涵蓋三種情境與四項加分功能（AC-17）。
